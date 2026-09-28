@@ -1,3 +1,9 @@
+# 僕のプログラム内のダメなやつ
+.env
+fitbit_token.json
+google_calendar.json
+seiichirou019@gmail.com_GoogleCalendar_token.json
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
