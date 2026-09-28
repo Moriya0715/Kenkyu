@@ -3,6 +3,7 @@
 fitbit_token.json
 google_calendar.json
 seiichirou019@gmail.com_GoogleCalendar_token.json
+.logs
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
