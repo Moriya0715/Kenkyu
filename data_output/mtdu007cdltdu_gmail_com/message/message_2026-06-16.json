@@ -1,0 +1,49 @@
+{
+  "messages": [
+    {
+      "user_id": "mtdu007cdltdu@gmail.com",
+      "timestamp": "2026-06-16T14:02:07.722738",
+      "exercise_type": "cardio",
+      "implemented": "no",
+      "pre_survey": {
+        "visibility": "no"
+      },
+      "post_survey": {
+        "implemented": "no",
+        "intensity": 5,
+        "reason": "other",
+        "other_reason": "ウォーキングはヤダ！"
+      }
+    },
+    {
+      "user_id": "mtdu007cdltdu@gmail.com",
+      "timestamp": "2026-06-16T16:51:18.332400",
+      "exercise_type": "stretch",
+      "implemented": "yes",
+      "pre_survey": {
+        "visibility": "yes"
+      },
+      "post_survey": {
+        "implemented": "yes",
+        "intensity": 5,
+        "reason": "other",
+        "other_reason": "ウォーキングはヤダ！"
+      }
+    },
+    {
+      "user_id": "mtdu007cdltdu@gmail.com",
+      "timestamp": "2026-06-16T17:49:25.358911",
+      "exercise_type": "stretch",
+      "implemented": "yes",
+      "pre_survey": {
+        "visibility": "yes"
+      },
+      "post_survey": {
+        "implemented": "yes",
+        "intensity": 5,
+        "reason": "other",
+        "other_reason": "ウォーキングはヤダ！"
+      }
+    }
+  ]
+}

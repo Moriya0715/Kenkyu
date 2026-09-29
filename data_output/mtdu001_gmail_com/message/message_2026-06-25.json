@@ -1,0 +1,34 @@
+{
+  "messages": [
+    {
+      "user_id": "mtdu001@gmail.com",
+      "timestamp": "2026-06-25T15:27:02.485107",
+      "exercise_type": "cardio",
+      "implemented": "no",
+      "pre_survey": {
+        "visibility": "yes"
+      },
+      "post_survey": {
+        "implemented": "no",
+        "intensity": 5,
+        "reason": "other",
+        "other_reason": "すでに実施したため"
+      }
+    },
+    {
+      "user_id": "mtdu001@gmail.com",
+      "timestamp": "2026-06-25T20:53:45.716202",
+      "exercise_type": "stretch",
+      "implemented": "yes",
+      "pre_survey": {
+        "visibility": "no"
+      },
+      "post_survey": {
+        "implemented": "yes",
+        "intensity": 8,
+        "reason": "other",
+        "other_reason": "すでに実施したため"
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "messages": [
+    {
+      "user_id": "mtdu006cdltdu@gmail.com",
+      "timestamp": "2026-06-16T17:49:53.571858",
+      "exercise_type": "stretch",
+      "implemented": "no",
+      "pre_survey": {
+        "visibility": "no"
+      },
+      "post_survey": {
+        "implemented": "no",
+        "intensity": 5,
+        "reason": "other",
+        "other_reason": "ウォーキングはヤダ！"
+      }
+    }
+  ]
+}

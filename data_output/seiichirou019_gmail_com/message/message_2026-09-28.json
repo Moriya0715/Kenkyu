@@ -1,0 +1,41 @@
+{
+  "messages": [
+    {
+      "user_id": "seiichirou019@gmail.com",
+      "timestamp": "2026-09-28T11:51:04.599171",
+      "exercise_type": "strength",
+      "implemented": "no",
+      "pre_survey": {},
+      "post_survey": {
+        "implemented": "no",
+        "reason": "other",
+        "other_reason": "強度が低いから"
+      }
+    },
+    {
+      "user_id": "seiichirou019@gmail.com",
+      "timestamp": "2026-09-28T11:51:09.304470",
+      "exercise_type": "strength",
+      "implemented": "no",
+      "pre_survey": {},
+      "post_survey": {
+        "implemented": "no",
+        "reason": "other",
+        "other_reason": "強度が低いから"
+      }
+    },
+    {
+      "user_id": "seiichirou019@gmail.com",
+      "timestamp": "2026-09-28T15:38:40.265701",
+      "exercise_type": "stretch",
+      "implemented": "no",
+      "pre_survey": {
+        "visibility": "no"
+      },
+      "post_survey": {
+        "implemented": "no",
+        "reason": "no_motivation"
+      }
+    }
+  ]
+}

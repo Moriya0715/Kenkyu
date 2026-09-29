@@ -1,0 +1,64 @@
+{
+  "messages": [
+    {
+      "user_id": "seiichirou019@gmail.com",
+      "timestamp": "2026-06-23T18:08:39.604563",
+      "exercise_type": "cardio",
+      "implemented": "no",
+      "pre_survey": {
+        "visibility": "no"
+      },
+      "post_survey": {
+        "implemented": "no",
+        "intensity": 7,
+        "reason": "other",
+        "other_reason": "すでに実施したため"
+      }
+    },
+    {
+      "user_id": "seiichirou019@gmail.com",
+      "timestamp": "2026-06-23T18:09:30.760803",
+      "exercise_type": "cardio",
+      "implemented": "yes",
+      "pre_survey": {
+        "visibility": "no"
+      },
+      "post_survey": {
+        "implemented": "yes",
+        "intensity": 7,
+        "reason": "other",
+        "other_reason": "すでに実施したため"
+      }
+    },
+    {
+      "user_id": "seiichirou019@gmail.com",
+      "timestamp": "2026-06-23T18:15:48.971822",
+      "exercise_type": "stretch",
+      "implemented": "yes",
+      "pre_survey": {
+        "visibility": "no"
+      },
+      "post_survey": {
+        "implemented": "yes",
+        "intensity": 7,
+        "reason": "other",
+        "other_reason": "すでに実施したため"
+      }
+    },
+    {
+      "user_id": "seiichirou019@gmail.com",
+      "timestamp": "2026-06-23T23:14:46.287102",
+      "exercise_type": "cardio",
+      "implemented": "no",
+      "pre_survey": {
+        "visibility": "no"
+      },
+      "post_survey": {
+        "implemented": "no",
+        "intensity": 5,
+        "reason": "no_time",
+        "other_reason": "すでに実施したため"
+      }
+    }
+  ]
+}

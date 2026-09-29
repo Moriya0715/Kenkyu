@@ -1,0 +1,38 @@
+{
+  "messages": [
+    {
+      "user_id": "seiichirou019@gmail.com",
+      "timestamp": "2026-09-19T11:13:53.795679",
+      "exercise_type": "cardio",
+      "implemented": "no",
+      "pre_survey": {},
+      "post_survey": {
+        "implemented": "no",
+        "reason": "no_motivation"
+      }
+    },
+    {
+      "user_id": "seiichirou019@gmail.com",
+      "timestamp": "2026-09-19T15:40:17.347143",
+      "exercise_type": "strength",
+      "implemented": "yes",
+      "pre_survey": {},
+      "post_survey": {
+        "implemented": "yes",
+        "intensity": 3
+      }
+    },
+    {
+      "user_id": "seiichirou019@gmail.com",
+      "timestamp": "2026-09-19T15:57:33.103668",
+      "exercise_type": "stretch",
+      "implemented": "yes",
+      "pre_survey": {
+        "visibility": "no"
+      },
+      "post_survey": {
+        "implemented": "yes"
+      }
+    }
+  ]
+}

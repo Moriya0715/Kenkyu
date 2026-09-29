@@ -1,0 +1,2 @@
+start_iso,end_iso,duration_min,start_local,end_local,start_time,end_time,weekday,duration_hm,range
+2026-06-17T00:00:00+09:00,2026-06-17T23:59:59+09:00,1439,2026-06-17 00:00 +0900,2026-06-17 23:59 +0900,00:00,23:59,Wed,23h59m,2026-06-17 00:00 +0900 - 2026-06-17 23:59 +0900 (Wed)

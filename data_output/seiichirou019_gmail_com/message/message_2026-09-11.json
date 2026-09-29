@@ -1,0 +1,86 @@
+{
+  "messages": [
+    {
+      "user_id": "seiichirou019@gmail.com",
+      "timestamp": "2026-09-11T10:59:28.114701",
+      "exercise_type": "strength",
+      "implemented": "yes",
+      "pre_survey": {},
+      "post_survey": {
+        "implemented": "yes",
+        "intensity": 7
+      }
+    },
+    {
+      "user_id": "seiichirou019@gmail.com",
+      "timestamp": "2026-09-11T12:07:00.287345",
+      "exercise_type": "cardio",
+      "implemented": "no",
+      "pre_survey": {},
+      "post_survey": {
+        "implemented": "no",
+        "reason": "no_time"
+      }
+    },
+    {
+      "user_id": "seiichirou019@gmail.com",
+      "timestamp": "2026-09-11T12:18:30.346446",
+      "exercise_type": "stretch",
+      "implemented": "yes",
+      "pre_survey": {
+        "visibility": "no"
+      },
+      "post_survey": {
+        "implemented": "yes"
+      }
+    },
+    {
+      "user_id": "seiichirou019@gmail.com",
+      "timestamp": "2026-09-11T14:36:33.829968",
+      "exercise_type": "stretch",
+      "implemented": "yes",
+      "pre_survey": {
+        "visibility": "no"
+      },
+      "post_survey": {
+        "implemented": "yes"
+      }
+    },
+    {
+      "user_id": "seiichirou019@gmail.com",
+      "timestamp": "2026-09-11T17:00:39.729149",
+      "exercise_type": "stretch",
+      "implemented": "no",
+      "pre_survey": {
+        "visibility": "no"
+      },
+      "post_survey": {
+        "implemented": "no",
+        "reason": "other",
+        "other_reason": "ストレッチ飽きた筋トレしたい"
+      }
+    },
+    {
+      "user_id": "seiichirou019@gmail.com",
+      "timestamp": "2026-09-11T23:06:08.279138",
+      "exercise_type": "strength",
+      "implemented": "yes",
+      "pre_survey": {},
+      "post_survey": {
+        "implemented": "yes",
+        "intensity": 5
+      }
+    },
+    {
+      "user_id": "seiichirou019@gmail.com",
+      "timestamp": "2026-09-11T23:06:23.154396",
+      "exercise_type": "strength",
+      "implemented": "yes",
+      "pre_survey": {},
+      "post_survey": {
+        "implemented": "yes",
+        "intensity": 6
+      }
+    }
+  ]
+}

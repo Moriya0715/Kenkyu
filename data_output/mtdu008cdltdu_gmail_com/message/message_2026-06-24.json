@@ -1,0 +1,19 @@
+{
+  "messages": [
+    {
+      "user_id": "mtdu008cdltdu@gmail.com",
+      "timestamp": "2026-06-24T10:42:59.181799",
+      "exercise_type": "cardio",
+      "implemented": "yes",
+      "pre_survey": {
+        "visibility": "no"
+      },
+      "post_survey": {
+        "implemented": "yes",
+        "intensity": 5,
+        "reason": "no_time",
+        "other_reason": "すでに実施したため"
+      }
+    }
+  ]
+}

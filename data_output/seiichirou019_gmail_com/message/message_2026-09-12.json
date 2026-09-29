@@ -1,0 +1,15 @@
+{
+  "messages": [
+    {
+      "user_id": "seiichirou019@gmail.com",
+      "timestamp": "2026-09-12T17:11:38.377965",
+      "exercise_type": "cardio",
+      "implemented": "no",
+      "pre_survey": {},
+      "post_survey": {
+        "implemented": "no",
+        "reason": "no_motivation"
+      }
+    }
+  ]
+}

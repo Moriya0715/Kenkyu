@@ -1,0 +1,28 @@
+{
+  "messages": [
+    {
+      "user_id": "seiichirou019@gmail.com",
+      "timestamp": "2026-05-18T16:42:23.547584",
+      "action_type": "submit",
+      "selected_values": [
+        "walk"
+      ]
+    },
+    {
+      "user_id": "seiichirou019@gmail.com",
+      "timestamp": "2026-05-18T16:42:49.032174",
+      "action_type": "survey_submit",
+      "selected_values": [
+        "yes"
+      ]
+    },
+    {
+      "user_id": "seiichirou019@gmail.com",
+      "timestamp": "2026-05-18T16:42:56.101248",
+      "action_type": "survey_submit",
+      "selected_values": [
+        "yes"
+      ]
+    }
+  ]
+}

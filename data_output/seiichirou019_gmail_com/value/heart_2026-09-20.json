@@ -1,0 +1,200 @@
+{
+  "PerMinute": [
+    {
+      "time": "00:01:00",
+      "heart_rate": 91,
+      "steps": 10,
+      "calories": 4.3716
+    },
+    {
+      "time": "00:02:00",
+      "heart_rate": 88,
+      "steps": 26,
+      "calories": 4.59018
+    },
+    {
+      "time": "00:03:00",
+      "heart_rate": 94,
+      "steps": 0,
+      "calories": 4.04373
+    },
+    {
+      "time": "00:04:00",
+      "heart_rate": 88,
+      "steps": 13,
+      "calories": 4.80876
+    },
+    {
+      "time": "00:05:00",
+      "heart_rate": 88,
+      "steps": 0,
+      "calories": 1.6393499999999999
+    },
+    {
+      "time": "00:06:00",
+      "heart_rate": 86,
+      "steps": 0,
+      "calories": 3.38799
+    },
+    {
+      "time": "00:07:00",
+      "heart_rate": 86,
+      "steps": 0,
+      "calories": 1.6393499999999999
+    },
+    {
+      "time": "00:08:00",
+      "heart_rate": 85,
+      "steps": 0,
+      "calories": 1.6393499999999999
+    },
+    {
+      "time": "00:09:00",
+      "heart_rate": 87,
+      "steps": 0,
+      "calories": 1.6393499999999999
+    },
+    {
+      "time": "00:10:00",
+      "heart_rate": 87,
+      "steps": 0,
+      "calories": 1.6393499999999999
+    },
+    {
+      "time": "00:11:00",
+      "heart_rate": 89,
+      "steps": 0,
+      "calories": 1.6393499999999999
+    },
+    {
+      "time": "00:12:00",
+      "heart_rate": 94,
+      "steps": 0,
+      "calories": 3.82515
+    },
+    {
+      "time": "00:13:00",
+      "heart_rate": 92,
+      "steps": 0,
+      "calories": 3.82515
+    },
+    {
+      "time": "00:14:00",
+      "heart_rate": 90,
+      "steps": 0,
+      "calories": 3.82515
+    },
+    {
+      "time": "00:15:00",
+      "heart_rate": 92,
+      "steps": 0,
+      "calories": 3.82515
+    },
+    {
+      "time": "00:16:00",
+      "heart_rate": 92,
+      "steps": 0,
+      "calories": 3.82515
+    },
+    {
+      "time": "00:17:00",
+      "heart_rate": 92,
+      "steps": 0,
+      "calories": 3.7158599999999997
+    },
+    {
+      "time": "00:18:00",
+      "heart_rate": 92,
+      "steps": 0,
+      "calories": 4.04373
+    },
+    {
+      "time": "00:19:00",
+      "heart_rate": 94,
+      "steps": 0,
+      "calories": 3.82515
+    },
+    {
+      "time": "00:20:00",
+      "heart_rate": 94,
+      "steps": 0,
+      "calories": 4.26231
+    },
+    {
+      "time": "00:21:00",
+      "heart_rate": 96,
+      "steps": 0,
+      "calories": 4.26231
+    },
+    {
+      "time": "00:22:00",
+      "heart_rate": 98,
+      "steps": 0,
+      "calories": 4.59018
+    },
+    {
+      "time": "00:23:00",
+      "heart_rate": null,
+      "steps": null,
+      "calories": 1.0929
+    },
+    {
+      "time": "00:24:00",
+      "heart_rate": null,
+      "steps": null,
+      "calories": 1.0929
+    },
+    {
+      "time": "00:25:00",
+      "heart_rate": null,
+      "steps": null,
+      "calories": 1.0929
+    },
+    {
+      "time": "00:26:00",
+      "heart_rate": null,
+      "steps": null,
+      "calories": 1.0929
+    },
+    {
+      "time": "00:27:00",
+      "heart_rate": null,
+      "steps": null,
+      "calories": 1.0929
+    },
+    {
+      "time": "00:28:00",
+      "heart_rate": null,
+      "steps": null,
+      "calories": 1.0929
+    },
+    {
+      "time": "00:29:00",
+      "heart_rate": null,
+      "steps": null,
+      "calories": 1.0929
+    },
+    {
+      "time": "00:30:00",
+      "heart_rate": null,
+      "steps": null,
+      "calories": 1.0929
+    },
+    {
+      "time": "00:31:00",
+      "heart_rate": null,
+      "steps": null,
+      "calories": 1.0929
+    }
+  ],
+  "calculated_value": {
+    "heart_rate_max": 98,
+    "heart_rate_min": 85,
+    "steps_max": 26,
+    "steps_min": 0,
+    "steps_max_min_diff": 26,
+    "resting_heart_rate": null,
+    "calories_max": 4.80876,
+    "calories_min": 1.0929
+  }
+}

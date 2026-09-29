@@ -1,0 +1,26 @@
+{
+  "messages": [
+    {
+      "user_id": "seiichirou019@gmail.com",
+      "timestamp": "2026-06-20T12:50:18.266158",
+      "exercise_type": "cardio",
+      "implemented": "yes",
+      "pre_survey": {},
+      "post_survey": {
+        "implemented": "yes",
+        "intensity": 3
+      }
+    },
+    {
+      "user_id": "seiichirou019@gmail.com",
+      "timestamp": "2026-06-20T13:45:47.742611",
+      "exercise_type": "cardio",
+      "implemented": "yes",
+      "pre_survey": {},
+      "post_survey": {
+        "implemented": "yes",
+        "intensity": 7
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "messages": [
+    {
+      "user_id": "mtdu007cdltdu@gmail.com",
+      "timestamp": "2026-06-15T19:34:43.458619",
+      "exercise_type": "cardio",
+      "implemented": "yes",
+      "pre_survey": {},
+      "post_survey": {
+        "implemented": "yes",
+        "intensity": 5
+      }
+    }
+  ]
+}

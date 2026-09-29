@@ -1,0 +1,18 @@
+{
+  "messages": [
+    {
+      "user_id": "mtdu001@gmail.com",
+      "timestamp": "2026-06-06T20:54:44.075846",
+      "exercise_type": "stretch",
+      "implemented": "no",
+      "pre_survey": {
+        "visibility": "no"
+      },
+      "post_survey": {
+        "implemented": "no",
+        "reason": "other",
+        "other_reason": "通知が多くてうざかったから"
+      }
+    }
+  ]
+}
