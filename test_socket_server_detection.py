@@ -11,26 +11,10 @@ logging.basicConfig(
     format='%(levelname)s: %(message)s',
 )
 
-# Check socket_server.lock
-socket_server_lock = os.path.join(os.getcwd(), 'locks', 'socket_server.lock')
-lock_exists = os.path.exists(socket_server_lock)
-print(f'socket_server.lock exists: {lock_exists}')
-
-if lock_exists:
-    with open(socket_server_lock, 'r') as f:
-        pid = f.read().strip()
-    print(f'socket_server PID: {pid}')
-    
-    # Check if process is running
-    try:
-        import subprocess
-        result = subprocess.run(['tasklist', '/FI', f'PID eq {pid}'], capture_output=True, text=True)
-        if pid in result.stdout:
-            print(f'Process {pid} is RUNNING ✓')
-        else:
-            print(f'Process {pid} is NOT running ✗')
-    except Exception as e:
-        print(f'Error checking process: {e}')
+# Check DB lock for socket_server
+import lock_db
+lock_exists = lock_db.is_held('socket_server')
+print(f'socket_server DB lock held: {lock_exists}')
 
 print('\nTesting launch_session behavior...')
 

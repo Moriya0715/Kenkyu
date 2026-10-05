@@ -1306,8 +1306,8 @@ def launch_session(
     # Socket Mode instance and ensures a single resident handler receives actions.
     try:
         # Accept either explicit env flag or an existing lock file from socket_server.py.
-        socket_server_lock = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'locks', 'socket_server.lock')
-        socket_server_running = os.path.exists(socket_server_lock)
+        import lock_db
+        socket_server_running = lock_db.is_held('socket_server')
         if socket_server_running:
             try:
                 # create sent notification record and pending response so DB state

@@ -97,6 +97,7 @@ import google_calendar_freebusy
 import tokens_db
 import slack_notifier
 import send_slack_checkbox
+import lock_db
 import fitbit_sleep
 
 # Configurable parameters
@@ -686,13 +687,12 @@ def main():
     # Keeping a single sender process avoids duplicate Slack posts for one DB queue item.
     notifier_thread = None
     try:
-        socket_lock = os.path.join(LOCKS_DIR, 'socket_server.lock')
-        socket_server_running = os.path.exists(socket_lock)
+        socket_server_running = lock_db.is_held('socket_server')
     except Exception:
         socket_server_running = False
 
     if socket_server_running:
-        logging.info('socket_server lock detected at %s; skip main notifier loop', socket_lock)
+        logging.info('socket_server DB lock detected; skip main notifier loop')
     else:
         notifier_thread = threading.Thread(target=_notifier_loop, args=(stop_event,), daemon=True)
         notifier_thread.start()
@@ -726,61 +726,20 @@ def main():
 
 
 if __name__ == '__main__':
-    # Acquire single-instance lock to avoid multiple Socket Mode clients on same host
-    lock_handle = None
+    # Acquire single-instance DB lock to avoid multiple Socket Mode clients
     try:
-        def _acquire_instance_lock(lock_name: str = 'main', lock_dir: str = LOCKS_DIR):
-            os.makedirs(lock_dir, exist_ok=True)
-            lock_path = os.path.join(lock_dir, f'{lock_name}.lock')
-            # open file descriptor that will be held for process lifetime
-            f = open(lock_path, 'a+', encoding='utf-8')
-            try:
-                if portalocker:
-                    portalocker.lock(f, portalocker.LOCK_EX | portalocker.LOCK_NB)
-                    logging.info('Acquired instance lock: %s', lock_path)
-                    return f
-                else:
-                    # Fallback: try exclusive create to detect existing lock
-                    # This is best-effort; may leave stale file if process crashes.
-                    try:
-                        fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-                        os.close(fd)
-                        f.write(str(os.getpid()))
-                        f.flush()
-                        logging.info('Acquired fallback instance lock: %s', lock_path)
-                        return f
-                    except FileExistsError:
-                        f.close()
-                        return None
-            except Exception:
-                try:
-                    f.close()
-                except Exception:
-                    pass
-                return None
-
-        lock_handle = _acquire_instance_lock()
-        if not lock_handle:
-            logging.error('Another instance appears to be running. Exiting.')
+        lock_owner = lock_db.make_owner()
+        if not lock_db.acquire('main', lock_owner):
+            logging.error('Another instance appears to be running (DB lock main is held). Exiting.')
             sys.exit(1)
+        heartbeat_stop = lock_db.start_heartbeat('main', lock_owner)
 
         should_restart = False
         try:
             should_restart = main()
         finally:
-            try:
-                if lock_handle:
-                    try:
-                        if portalocker:
-                            portalocker.unlock(lock_handle)
-                    except Exception:
-                        pass
-                    try:
-                        lock_handle.close()
-                    except Exception:
-                        pass
-            except Exception:
-                pass
+            heartbeat_stop.set()
+            lock_db.release('main', lock_owner)
 
         if should_restart:
             try:

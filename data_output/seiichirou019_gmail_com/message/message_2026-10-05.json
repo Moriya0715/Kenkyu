@@ -1,0 +1,17 @@
+{
+  "messages": [
+    {
+      "user_id": "seiichirou019@gmail.com",
+      "timestamp": "2026-10-05T17:57:30.884001",
+      "exercise_type": "strength",
+      "implemented": "yes",
+      "pre_survey": {
+        "visibility": "no"
+      },
+      "post_survey": {
+        "implemented": "yes",
+        "intensity": 5
+      }
+    }
+  ]
+}

@@ -112,8 +112,10 @@ CREATE TABLE IF NOT EXISTS google_calendar_tokens (
   raw_json TEXT
 );
 
--- simple locks table
+-- named locks with heartbeat (see lock_db.py)
 CREATE TABLE IF NOT EXISTS locks (
-  user_id TEXT PRIMARY KEY,
-  acquired_at TIMESTAMPTZ
+  lock_name TEXT PRIMARY KEY,
+  owner TEXT NOT NULL,
+  acquired_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  heartbeat_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

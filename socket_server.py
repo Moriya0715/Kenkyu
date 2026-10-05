@@ -1,4 +1,4 @@
-"""Dedicated Socket Mode server that centralizes interactive Slack handlers.
+﻿"""Dedicated Socket Mode server that centralizes interactive Slack handlers.
 
 Usage: set `SLACK_BOT_TOKEN` and `SLACK_APP_TOKEN` in env and run this module.
 This script reuses `send_slack_checkbox.create_app` to register handlers, and
@@ -19,7 +19,7 @@ import subprocess
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 
 repo_root = os.path.dirname(os.path.abspath(__file__))
-LOCKS_DIR = os.path.join(repo_root, 'locks')
+LOCK_NAME = 'socket_server'
 LOGS_DIR = os.path.join(repo_root, 'logs')
 
 # Ensure .env is loaded before importing modules that may read DB settings
@@ -48,6 +48,7 @@ except Exception as e:
     raise
 
 import slack_notifier
+import lock_db
 
 # Load .env from repo root early so imported modules see DATABASE_URL etc.
 def _load_dotenv(path: str = '.env'):
@@ -96,91 +97,10 @@ def setup_logging():
     )
 
 
-def acquire_lock(lock_path: str) -> int:
-    """Create a pid lock file atomically. Returns file descriptor on success.
-    Raises FileExistsError if already running."""
-    os.makedirs(os.path.dirname(lock_path), exist_ok=True)
-    flags = os.O_CREAT | os.O_EXCL | os.O_RDWR
-    try:
-        fd = os.open(lock_path, flags)
-        os.write(fd, str(os.getpid()).encode('utf-8'))
-        os.fsync(fd)
-        return fd
-    except FileExistsError:
-        # Check for stale lock: if the pid in the lock file is not running,
-        # or not clearly our socket_server process, remove the file and try
-        # to acquire again. Use tasklist / wmic on Windows for more checks.
-        existing_pid = None
-        try:
-            try:
-                with open(lock_path, 'r', encoding='utf-8') as f:
-                    content = f.read().strip()
-                    existing_pid = int(content) if content else None
-            except Exception:
-                existing_pid = None
-
-            if existing_pid:
-                try:
-                    import subprocess
-                    # First quick check: is PID present at all?
-                    res = subprocess.run(['tasklist', '/FI', f'PID eq {existing_pid}'], capture_output=True, text=True)
-                    pid_present = str(existing_pid) in (res.stdout or '')
-
-                    # If PID not present, it's safe to remove the lock
-                    if not pid_present:
-                        try:
-                            os.remove(lock_path)
-                        except Exception:
-                            pass
-                        fd = os.open(lock_path, flags)
-                        os.write(fd, str(os.getpid()).encode('utf-8'))
-                        os.fsync(fd)
-                        return fd
-
-                    # PID exists. Try to inspect its command line to ensure it's
-                    # actually an instance of our socket_server. If it doesn't
-                    # mention 'socket_server.py' or this repo path, treat as stale.
-                    cmdline = ''
-                    try:
-                        wmic = subprocess.run(['wmic', 'process', 'where', f'ProcessId={existing_pid}', 'get', 'CommandLine'], capture_output=True, text=True)
-                        cmdline = (wmic.stdout or '') + (wmic.stderr or '')
-                    except Exception:
-                        cmdline = ''
-
-                    if not cmdline or 'socket_server' not in cmdline:
-                        try:
-                            os.remove(lock_path)
-                        except Exception:
-                            pass
-                        fd = os.open(lock_path, flags)
-                        os.write(fd, str(os.getpid()).encode('utf-8'))
-                        os.fsync(fd)
-                        return fd
-                except Exception:
-                    # If any of the checks fail, fall through and propagate
-                    pass
-
-        finally:
-            # If we couldn't clear a stale lock, propagate the error with context
-            msg = f'Lock file exists and appears held by pid={existing_pid}' if existing_pid else 'Lock file exists'
-            raise FileExistsError(msg)
-
-
-def release_lock(fd: int, lock_path: str):
-    try:
-        os.close(fd)
-    except Exception:
-        pass
-    try:
-        os.remove(lock_path)
-    except Exception:
-        pass
-
-
-def _ensure_release_on_exit(fd: int, lock_path: str):
+def _ensure_release_on_exit(release_fn):
     def _cleanup():
         try:
-            release_lock(fd, lock_path)
+            release_fn()
         except Exception:
             pass
 
@@ -345,21 +265,27 @@ def _process_pending_once(bot_token: str, limit: int = 10):
 
 def main():
     setup_logging()
-    os.makedirs(LOCKS_DIR, exist_ok=True)
-    lock_file = os.path.join(LOCKS_DIR, 'socket_server.lock')
-
+    lock_owner = lock_db.make_owner()
     try:
-        fd = acquire_lock(lock_file)
-    except FileExistsError:
-        logging.error('socket_server already running (lock exists at %s)', lock_file)
+        acquired = lock_db.acquire(LOCK_NAME, lock_owner)
+    except Exception:
+        logging.exception('failed to acquire DB lock')
         sys.exit(1)
+    if not acquired:
+        logging.error('socket_server already running (DB lock %s is held)', LOCK_NAME)
+        sys.exit(1)
+    heartbeat_stop = lock_db.start_heartbeat(LOCK_NAME, lock_owner)
+
+    def _release():
+        heartbeat_stop.set()
+        lock_db.release(LOCK_NAME, lock_owner)
 
     bot_token = os.environ.get('SLACK_BOT_TOKEN')
     app_token = os.environ.get('SLACK_APP_TOKEN')
 
     if not bot_token or not app_token:
         logging.error('SLACK_BOT_TOKEN and SLACK_APP_TOKEN must be set in environment')
-        release_lock(fd, lock_file)
+        _release()
         sys.exit(2)
 
     # create a placeholder session for create_app; handlers will update session fields
@@ -396,7 +322,7 @@ def main():
 
     # Ensure lock is cleaned up on exit
     try:
-        _ensure_release_on_exit(fd, lock_file)
+        _ensure_release_on_exit(_release)
     except Exception:
         pass
 
@@ -428,7 +354,7 @@ def main():
             logging.exception('Error stopping handler')
         # release lock (atexit also registered, but call explicitly)
         try:
-            release_lock(fd, lock_file)
+            _release()
         except Exception:
             pass
 
