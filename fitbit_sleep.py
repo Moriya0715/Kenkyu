@@ -9,13 +9,12 @@ This module caches recent API responses per-user for `ttl_seconds` to avoid
 excessive API calls. On error, it returns False (do not suppress notifications).
 """
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional, List
 import logging
 
 import os
 import json
-from datetime import datetime
 import storage_sqlite
 import fitbit_sampler
 
@@ -115,36 +114,46 @@ def _ensure_sleep_dir(user_id: str) -> str:
     return sleep_dir
 
 
-def _bootstrap_marker_path(user_id: str, day: datetime.date) -> str:
+def _sleep_file_path(user_id: str, day: date) -> str:
+    safe = storage_sqlite._sanitize_user_id(user_id)
+    return os.path.join('data_output', safe, 'sleep', f'sleep_{day.isoformat()}.json')
+
+
+def _refresh_marker_path(user_id: str, day: date) -> str:
     sleep_dir = _ensure_sleep_dir(user_id)
-    return os.path.join(sleep_dir, f'.bootstrap_{day.isoformat()}.json')
+    return os.path.join(sleep_dir, f'.sleep_refresh_{day.isoformat()}.json')
 
 
-def _was_bootstrap_attempted_today(user_id: str, now: datetime) -> bool:
+def _was_refresh_attempted_today(user_id: str, now: datetime) -> bool:
     try:
-        return os.path.exists(_bootstrap_marker_path(user_id, now.date()))
+        return os.path.exists(_refresh_marker_path(user_id, now.date()))
     except Exception:
         return False
 
 
-def _mark_bootstrap_attempt_today(user_id: str, now: datetime):
-    marker = _bootstrap_marker_path(user_id, now.date())
+def _mark_refresh_attempt_today(user_id: str, now: datetime):
+    marker = _refresh_marker_path(user_id, now.date())
     payload = {
         'date': now.date().isoformat(),
         'attempted_at': now.isoformat(),
-        'source': 'is_in_median_sleep_window',
+        'source': 'scheduled_sleep_refresh',
     }
     try:
         with open(marker, 'w', encoding='utf-8') as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)
     except Exception:
-        logging.exception('Failed to write bootstrap marker for %s', user_id)
+        logging.exception('Failed to write sleep refresh marker for %s', user_id)
 
 
-def _save_sessions_to_disk(user_id: str, sessions: List[dict], fetched_at: datetime):
+def _save_sessions_to_disk(
+    user_id: str,
+    sessions: List[dict],
+    fetched_at: datetime,
+    date_tag: Optional[str] = None,
+):
     """Save sessions to `data_output/<safe_user>/sleep/sleep_YYYY-MM-DD.json`.
 
-    Overwrites the per-day file for the date of `fetched_at`.
+    Overwrites the per-day file selected by `date_tag`, or `fetched_at` by default.
     """
     if not sessions:
         # still create an empty structure for that date
@@ -165,7 +174,7 @@ def _save_sessions_to_disk(user_id: str, sessions: List[dict], fetched_at: datet
             raw = s.get('raw') if isinstance(s.get('raw'), dict) else s
             sessions_out.append({'start': start, 'end': end, 'duration_min': duration, 'raw': raw})
 
-    date_tag = fetched_at.strftime('%Y-%m-%d')
+    date_tag = date_tag or fetched_at.strftime('%Y-%m-%d')
     out = {
         'date': date_tag,
         'fetched_at': fetched_at.isoformat(),
@@ -196,25 +205,85 @@ def _save_sessions_to_disk(user_id: str, sessions: List[dict], fetched_at: datet
         logging.exception('Failed writing sleep snapshots for %s', user_id)
 
 
-def _bootstrap_recent_sleep_history(user_id: str, now: datetime, max_days: int = 14):
-    """Fetch and persist recent daily sleep snapshots to local files.
+def _fetch_sleep_for_window(user_id: str, start_date, end_date, tz) -> list[dict]:
+    start = datetime(start_date.year, start_date.month, start_date.day, tzinfo=tz)
+    exclusive_end = end_date + timedelta(days=1)
+    end = datetime(exclusive_end.year, exclusive_end.month, exclusive_end.day, tzinfo=tz)
+    return fitbit_sampler.fetch_sleep_sessions(user_id, start, end)
 
-    This is used when local sleep history is missing so median-based suppression
-    can start working without manual pre-population.
-    """
+
+def _group_sessions_by_end_date(sessions: List[dict], start_date, end_date, tz) -> dict:
+    grouped = {}
+    day = start_date
+    while day <= end_date:
+        grouped[day.isoformat()] = []
+        day += timedelta(days=1)
+
+    for session in sessions:
+        end_value = session.get('end') or session.get('endTime') or session.get('endTimeLocal')
+        end_dt = _parse_iso(end_value) if end_value else None
+        if end_dt is None:
+            continue
+        if end_dt.tzinfo is None:
+            end_dt = end_dt.replace(tzinfo=tz)
+        else:
+            end_dt = end_dt.astimezone(tz)
+        day_key = end_dt.date().isoformat()
+        if day_key in grouped:
+            grouped[day_key].append(session)
+    return grouped
+
+
+def _saved_file_has_sessions(path: str) -> bool:
+    if not os.path.exists(path):
+        return False
     try:
-        tz = now.tzinfo or timezone.utc
-        for i in range(max_days):
-            d = now.date() - timedelta(days=i)
-            try:
-                sessions = _fetch_sleep_for_date(user_id, d.isoformat())
-                fetched_at = datetime(d.year, d.month, d.day, 12, 0, 0, tzinfo=tz)
-                _save_sessions_to_disk(user_id, sessions, fetched_at)
-            except Exception:
-                logging.exception('bootstrap sleep history: fetch/save failed for %s on %s', user_id, d)
-                continue
+        with open(path, 'r', encoding='utf-8') as f:
+            return bool((json.load(f) or {}).get('sessions'))
     except Exception:
-        logging.exception('bootstrap sleep history: unexpected failure for %s', user_id)
+        logging.exception('Failed reading existing sleep file %s', path)
+        return True
+
+
+def refresh_recent_sleep_history_if_due(
+    user_id: str,
+    now: datetime,
+    max_days: int = 14,
+    refresh_hour: int = 12,
+) -> bool:
+    """Refresh the rolling sleep history once daily at or after the scheduled hour."""
+    if now.hour < refresh_hour or _was_refresh_attempted_today(user_id, now):
+        return False
+
+    _mark_refresh_attempt_today(user_id, now)
+    end_date = now.date()
+    start_date = end_date - timedelta(days=max_days - 1)
+    tz = now.tzinfo or timezone.utc
+
+    try:
+        sessions = _fetch_sleep_for_window(user_id, start_date, end_date, tz)
+        sessions_by_date = _group_sessions_by_end_date(sessions, start_date, end_date, tz)
+    except Exception:
+        logging.exception('Scheduled sleep history fetch failed for %s', user_id)
+        return True
+
+    saved_count = 0
+    for date_str, daily_sessions in sessions_by_date.items():
+        day = date.fromisoformat(date_str)
+        path = _sleep_file_path(user_id, day)
+        if not daily_sessions and _saved_file_has_sessions(path):
+            continue
+        _save_sessions_to_disk(user_id, daily_sessions, now, date_tag=date_str)
+        saved_count += len(daily_sessions)
+
+    logging.info(
+        'Scheduled sleep history refresh completed user=%s range=%s..%s sessions=%s',
+        user_id,
+        start_date,
+        end_date,
+        saved_count,
+    )
+    return True
 
 
 def save_sessions(user_id: str, sessions: List[dict], fetched_at: Optional[datetime] = None):
@@ -559,23 +628,43 @@ def _median(values: List[int]) -> Optional[float]:
     return (ordered[mid - 1] + ordered[mid]) / 2.0
 
 
+def _get_sleep_times_for_window(user_id: str, now: datetime, max_days: int):
+    starts = []
+    ends = []
+    for offset in range(max_days):
+        day = now.date() - timedelta(days=offset)
+        path = _sleep_file_path(user_id, day)
+        if not os.path.exists(path):
+            continue
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                sessions = (json.load(f) or {}).get('sessions') or []
+            if not sessions:
+                continue
+            chosen = next(
+                (session for session in sessions if (session.get('raw') or {}).get('isMainSleep')),
+                sessions[0],
+            )
+            start_value = chosen.get('start') or (chosen.get('raw') or {}).get('startTime')
+            end_value = chosen.get('end') or (chosen.get('raw') or {}).get('endTime')
+            start_dt = _parse_iso(start_value) if start_value else None
+            end_dt = _parse_iso(end_value) if end_value else None
+            if start_dt is not None and end_dt is not None:
+                starts.append(start_dt)
+                ends.append(end_dt)
+        except Exception:
+            logging.exception('Failed reading sleep file %s', path)
+    return starts, ends
+
+
 def is_in_median_sleep_window(user_id: str, now: datetime, max_items: int = 14) -> bool:
     """Return True when `now` is inside the user's median sleep time window.
 
-    - Uses up to latest `max_items` saved sleep sessions.
-    - If available items are fewer than `max_items`, uses all available items.
+    - Uses saved sleep sessions from today and the preceding `max_items - 1` dates.
     - If no usable data exists, returns False.
     """
     try:
-        starts = get_recent_sleep_starts(user_id, max_items=max_items)
-        ends = get_recent_sleep_ends(user_id, max_items=max_items)
-        # If local files are missing, bootstrap recent history from Fitbit API.
-        if not starts or not ends:
-            if not _was_bootstrap_attempted_today(user_id, now):
-                _mark_bootstrap_attempt_today(user_id, now)
-                _bootstrap_recent_sleep_history(user_id, now, max_days=max_items)
-            starts = get_recent_sleep_starts(user_id, max_items=max_items)
-            ends = get_recent_sleep_ends(user_id, max_items=max_items)
+        starts, ends = _get_sleep_times_for_window(user_id, now, max_items)
         if not starts or not ends:
             return False
 

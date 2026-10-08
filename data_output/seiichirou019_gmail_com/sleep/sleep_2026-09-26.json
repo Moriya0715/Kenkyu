@@ -1,0 +1,137 @@
+{
+  "date": "2026-09-26",
+  "fetched_at": "2026-10-08T12:00:17.602691+09:00",
+  "source": "google_health",
+  "sessions": [
+    {
+      "start": "2026-09-26T09:09:00Z",
+      "end": "2026-09-26T11:00:00Z",
+      "duration_min": 111,
+      "raw": {
+        "interval": {
+          "startTime": "2026-09-26T09:09:00Z",
+          "startUtcOffset": "32400s",
+          "endTime": "2026-09-26T11:00:00Z",
+          "endUtcOffset": "32400s"
+        },
+        "type": "STAGES",
+        "stages": [
+          {
+            "startTime": "2026-09-26T09:09:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-09-26T09:16:00Z",
+            "endUtcOffset": "32400s",
+            "type": "AWAKE",
+            "createTime": "2026-09-26T12:05:04.652495Z",
+            "updateTime": "2026-09-26T12:05:04.652495Z"
+          },
+          {
+            "startTime": "2026-09-26T09:16:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-09-26T10:06:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT",
+            "createTime": "2026-09-26T12:05:04.652495Z",
+            "updateTime": "2026-09-26T12:05:04.652495Z"
+          },
+          {
+            "startTime": "2026-09-26T10:06:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-09-26T10:20:00Z",
+            "endUtcOffset": "32400s",
+            "type": "REM",
+            "createTime": "2026-09-26T12:05:04.652495Z",
+            "updateTime": "2026-09-26T12:05:04.652495Z"
+          },
+          {
+            "startTime": "2026-09-26T10:20:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-09-26T10:32:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT",
+            "createTime": "2026-09-26T12:05:04.652495Z",
+            "updateTime": "2026-09-26T12:05:04.652495Z"
+          },
+          {
+            "startTime": "2026-09-26T10:32:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-09-26T11:00:00Z",
+            "endUtcOffset": "32400s",
+            "type": "AWAKE",
+            "createTime": "2026-09-26T12:05:04.652495Z",
+            "updateTime": "2026-09-26T12:05:04.652495Z"
+          }
+        ],
+        "metadata": {
+          "stagesStatus": "SUCCEEDED",
+          "processed": true,
+          "nap": true,
+          "mainSleep": true
+        },
+        "summary": {
+          "minutesInSleepPeriod": "111",
+          "minutesAfterWakeUp": "0",
+          "minutesToFallAsleep": "0",
+          "minutesAsleep": "76",
+          "minutesAwake": "35",
+          "stagesSummary": [
+            {
+              "type": "AWAKE",
+              "minutes": "35",
+              "count": "2"
+            },
+            {
+              "type": "LIGHT",
+              "minutes": "62",
+              "count": "2"
+            },
+            {
+              "type": "REM",
+              "minutes": "14",
+              "count": "1"
+            }
+          ]
+        },
+        "createTime": "2026-09-26T09:37:19.542335Z",
+        "updateTime": "2026-09-26T14:50:20.969183Z",
+        "shortAwakenings": [
+          {
+            "startTime": "2026-09-26T09:21:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-09-26T09:23:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          },
+          {
+            "startTime": "2026-09-26T09:37:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-09-26T09:38:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          },
+          {
+            "startTime": "2026-09-26T09:55:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-09-26T09:56:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          },
+          {
+            "startTime": "2026-09-26T10:20:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-09-26T10:21:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          },
+          {
+            "startTime": "2026-09-26T10:28:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-09-26T10:29:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          }
+        ]
+      }
+    }
+  ]
+}

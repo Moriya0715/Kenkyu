@@ -592,9 +592,11 @@ def sampler_loop(sampler: Sampler, stop_event: threading.Event, slack_cfg):
     logging.info('Sampler loop started (interval=%s sec)', SAMPLE_INTERVAL)
     while not stop_event.is_set():
         now = datetime.now().astimezone()
-        # evaluate conditions if in free interval
-        # (per-minute data itself is collected by full_day_updater, which writes to the same day JSON file)
         try:
+            fitbit_sleep.refresh_recent_sleep_history_if_due(sampler.user_id, now)
+
+            # Evaluate events only during free intervals. Per-minute samples are
+            # collected by full_day_updater and written to the same day JSON file.
             intervals = read_free_intervals_for_today(sampler.user_id)
             in_free = False
             curr_interval = None
