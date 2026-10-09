@@ -8,7 +8,9 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 import json
+import logging
 import os
+import time
 from typing import Any, Iterable, Optional
 
 import requests
@@ -17,6 +19,8 @@ import get_fitbit_token
 
 
 HEALTH_API_ROOT = "https://health.googleapis.com/v4/users/me/dataTypes"
+_RESTING_HEART_RATE_CACHE_TTL_SECONDS = 60 * 60
+_RESTING_HEART_RATE_CACHE: dict[tuple[str, str], tuple[float, Optional[int]]] = {}
 
 
 def _get_access_token(user_id: str) -> str:
@@ -70,13 +74,21 @@ def _list_data_points(access_token: str, data_type: str, start: datetime, end: d
         time_field = f"{filter_name}.sample_time.physical_time"
     elif data_type == "sleep":
         time_field = f"{filter_name}.interval.end_time"
+    elif data_type == "daily-resting-heart-rate":
+        time_field = f"{filter_name}.date"
     else:
         time_field = f"{filter_name}.interval.start_time"
+    if data_type == "daily-resting-heart-rate":
+        start_value = start.date().isoformat()
+        end_value = end.date().isoformat()
+    else:
+        start_value = _utc_iso(start)
+        end_value = _utc_iso(end)
     params = {
         "pageSize": 10000,
         "filter": (
-            f'{time_field} >= "{_utc_iso(start)}" '
-            f'AND {time_field} < "{_utc_iso(end)}"'
+            f'{time_field} >= "{start_value}" '
+            f'AND {time_field} < "{end_value}"'
         ),
     }
     points: list[dict] = []
@@ -312,6 +324,45 @@ def sample_once(user_id: str):
     return sample
 
 
+def _extract_resting_heart_rate(data_points: list[dict]) -> Optional[int]:
+    for point in data_points:
+        payload = point.get("dailyRestingHeartRate")
+        if not isinstance(payload, dict):
+            continue
+        value = _first_number(payload.get("beatsPerMinute"), ())
+        if value is not None:
+            return int(round(value))
+    return None
+
+
+def _get_daily_resting_heart_rate(
+    user_id: str,
+    access_token: str,
+    day: str,
+    start: datetime,
+) -> Optional[int]:
+    cache_key = (user_id, day)
+    now = time.monotonic()
+    cached = _RESTING_HEART_RATE_CACHE.get(cache_key)
+    if cached and now - cached[0] < _RESTING_HEART_RATE_CACHE_TTL_SECONDS:
+        return cached[1]
+
+    try:
+        daily_points = _list_data_points(
+            access_token,
+            "daily-resting-heart-rate",
+            start,
+            start + timedelta(days=1),
+        )
+        value = _extract_resting_heart_rate(daily_points)
+    except Exception:
+        logging.exception("Failed to fetch daily resting heart rate for %s on %s", user_id, day)
+        value = None
+
+    _RESTING_HEART_RATE_CACHE[cache_key] = (now, value)
+    return value
+
+
 def fetch_day(user_id: str, date: str, include_summary: bool = False):
     """Fetch one calendar day as existing PerMinute-compatible records."""
     local_tz = datetime.now().astimezone().tzinfo
@@ -319,10 +370,17 @@ def fetch_day(user_id: str, date: str, include_summary: bool = False):
     full_day_end = start + timedelta(days=1) - timedelta(minutes=1)
     now = datetime.now(local_tz).replace(second=0, microsecond=0)
     end = min(full_day_end, now) if start.date() == now.date() else full_day_end
-    raw_samples = _fetch_minutes(_get_access_token(user_id), start, end + timedelta(minutes=1))
+    access_token = _get_access_token(user_id)
+    raw_samples = _fetch_minutes(access_token, start, end + timedelta(minutes=1))
     per_minute = _complete_minute_timeline(start, end, raw_samples)
     if include_summary:
-        return per_minute, {"resting_heart_rate": None}
+        resting_heart_rate = _get_daily_resting_heart_rate(
+            user_id,
+            access_token,
+            date,
+            start,
+        )
+        return per_minute, {"resting_heart_rate": resting_heart_rate}
     return per_minute
 
 
@@ -379,6 +437,9 @@ def save_day_json(user_id: str, date: str, per_minute: list, out_dir: str = "./d
     heart_rates = [item["heart_rate"] for item in merged if isinstance(item.get("heart_rate"), (int, float))]
     steps = [item["steps"] for item in merged if isinstance(item.get("steps"), (int, float))]
     calories = [item["calories"] for item in merged if isinstance(item.get("calories"), (int, float))]
+    existing_calculated = existing.get("calculated_value", {}) if isinstance(existing, dict) else {}
+    if resting_heart_rate is None:
+        resting_heart_rate = existing_calculated.get("resting_heart_rate")
     output = {
         "PerMinute": merged,
         "calculated_value": {
