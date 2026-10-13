@@ -21,6 +21,18 @@
         "implemented": "yes",
         "intensity": 6
       }
+    },
+    {
+      "user_id": "seiichirou019@gmail.com",
+      "timestamp": "2026-10-13T15:17:32.584255",
+      "exercise_type": "stretch",
+      "implemented": "yes",
+      "pre_survey": {
+        "visibility": "yes"
+      },
+      "post_survey": {
+        "implemented": "yes"
+      }
     }
   ]
 }
