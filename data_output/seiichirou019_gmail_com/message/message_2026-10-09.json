@@ -33,6 +33,19 @@
       "post_survey": {
         "implemented": "yes"
       }
+    },
+    {
+      "user_id": "seiichirou019@gmail.com",
+      "timestamp": "2026-10-09T16:59:04.254571",
+      "exercise_type": "strength",
+      "implemented": "yes",
+      "pre_survey": {
+        "visibility": "no"
+      },
+      "post_survey": {
+        "implemented": "yes",
+        "intensity": 3
+      }
     }
   ]
 }
