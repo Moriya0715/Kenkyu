@@ -119,3 +119,20 @@ CREATE TABLE IF NOT EXISTS locks (
   acquired_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   heartbeat_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- sleep time sessions
+CREATE TABLE IF NOT EXISTS sleeptime (
+  id SERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  sleep_date DATE NOT NULL,
+  start_time TIMESTAMPTZ NOT NULL,
+  end_time TIMESTAMPTZ NOT NULL,
+  duration_min INTEGER,
+  is_main_sleep BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (user_id, sleep_date, start_time)
+);
+CREATE INDEX IF NOT EXISTS idx_sleeptime_user_date ON sleeptime (user_id, sleep_date);
+CREATE INDEX IF NOT EXISTS idx_sleeptime_user_start ON sleeptime (user_id, start_time);
+

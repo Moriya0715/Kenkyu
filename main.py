@@ -326,8 +326,17 @@ def evaluate_parsed_and_enqueue(user_id: str, parsed: list, now: datetime, curr_
     """Detect events and launch the checkbox survey session for each eligible event."""
     try:
         try:
-            if fitbit_sleep.is_in_median_sleep_window(user_id, now, max_items=14):
-                logging.info('Median sleep window suppression: user=%s', user_id)
+            suppressed, sleep_info = fitbit_sleep.get_median_sleep_suppression_status(user_id, now, max_items=14)
+            if suppressed:
+                w_start = sleep_info.get('median_start') if sleep_info else 'unknown'
+                w_end = sleep_info.get('median_end') if sleep_info else 'unknown'
+                logging.info(
+                    'Median sleep window suppression: user=%s, median_window=%s-%s, samples=%s',
+                    user_id,
+                    w_start,
+                    w_end,
+                    sleep_info.get('starts_count') if sleep_info else 0,
+                )
                 return
         except Exception:
             logging.exception('Median sleep window check failed for user=%s; continuing notifications', user_id)
@@ -658,6 +667,13 @@ def main():
         storage_sqlite.ensure_schema()
     except Exception:
         logging.exception('Failed to ensure DB schema')
+
+    # Sync sleep sessions from JSON to DB (sleeptime table)
+    try:
+        synced_count = storage_sqlite.sync_sleep_json_to_db()
+        logging.info('Synced sleep sessions from JSON to DB: %d records updated', synced_count)
+    except Exception:
+        logging.exception('Failed to sync sleep sessions from JSON to DB')
     
     # normal continuous mode
     stop_event = threading.Event()

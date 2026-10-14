@@ -1,0 +1,137 @@
+{
+  "date": "2026-10-09",
+  "fetched_at": "2026-10-14T12:00:44.639193+09:00",
+  "source": "google_health",
+  "sessions": [
+    {
+      "start": "2026-10-09T00:15:00Z",
+      "end": "2026-10-09T02:08:00Z",
+      "duration_min": 113,
+      "raw": {
+        "interval": {
+          "startTime": "2026-10-09T00:15:00Z",
+          "startUtcOffset": "32400s",
+          "endTime": "2026-10-09T02:08:00Z",
+          "endUtcOffset": "32400s"
+        },
+        "type": "CLASSIC",
+        "stages": [
+          {
+            "startTime": "2026-10-09T00:15:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-10-09T02:08:00Z",
+            "endUtcOffset": "32400s",
+            "type": "ASLEEP",
+            "createTime": "2026-10-09T02:13:19.822975Z",
+            "updateTime": "2026-10-09T02:13:19.822975Z"
+          }
+        ],
+        "metadata": {
+          "stagesStatus": "REJECTED_COVERAGE",
+          "processed": true,
+          "nap": true
+        },
+        "summary": {
+          "minutesInSleepPeriod": "113",
+          "minutesAfterWakeUp": "0",
+          "minutesToFallAsleep": "0",
+          "minutesAsleep": "113",
+          "minutesAwake": "0",
+          "stagesSummary": [
+            {
+              "type": "ASLEEP",
+              "minutes": "113",
+              "count": "1"
+            }
+          ]
+        },
+        "createTime": "2026-10-09T02:13:19.822975Z",
+        "updateTime": "2026-10-09T06:27:59.699631Z"
+      }
+    },
+    {
+      "start": "2026-10-08T14:34:00Z",
+      "end": "2026-10-08T15:46:00Z",
+      "duration_min": 72,
+      "raw": {
+        "interval": {
+          "startTime": "2026-10-08T14:34:00Z",
+          "startUtcOffset": "32400s",
+          "endTime": "2026-10-08T15:46:00Z",
+          "endUtcOffset": "32400s"
+        },
+        "type": "STAGES",
+        "stages": [
+          {
+            "startTime": "2026-10-08T14:34:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-10-08T14:40:00Z",
+            "endUtcOffset": "32400s",
+            "type": "AWAKE",
+            "createTime": "2026-10-09T02:13:21.688031Z",
+            "updateTime": "2026-10-09T02:13:21.688031Z"
+          },
+          {
+            "startTime": "2026-10-08T14:40:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-10-08T14:51:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT",
+            "createTime": "2026-10-09T02:13:21.688031Z",
+            "updateTime": "2026-10-09T02:13:21.688031Z"
+          },
+          {
+            "startTime": "2026-10-08T14:51:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-10-08T15:25:00Z",
+            "endUtcOffset": "32400s",
+            "type": "DEEP",
+            "createTime": "2026-10-09T02:13:21.688031Z",
+            "updateTime": "2026-10-09T02:13:21.688031Z"
+          },
+          {
+            "startTime": "2026-10-08T15:25:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-10-08T15:46:00Z",
+            "endUtcOffset": "32400s",
+            "type": "AWAKE",
+            "createTime": "2026-10-09T02:13:21.688031Z",
+            "updateTime": "2026-10-09T02:13:21.688031Z"
+          }
+        ],
+        "metadata": {
+          "stagesStatus": "SUCCEEDED",
+          "processed": true,
+          "nap": true,
+          "mainSleep": true
+        },
+        "summary": {
+          "minutesInSleepPeriod": "72",
+          "minutesAfterWakeUp": "0",
+          "minutesToFallAsleep": "0",
+          "minutesAsleep": "45",
+          "minutesAwake": "27",
+          "stagesSummary": [
+            {
+              "type": "AWAKE",
+              "minutes": "27",
+              "count": "2"
+            },
+            {
+              "type": "LIGHT",
+              "minutes": "11",
+              "count": "1"
+            },
+            {
+              "type": "DEEP",
+              "minutes": "34",
+              "count": "1"
+            }
+          ]
+        },
+        "createTime": "2026-10-09T02:13:19.796287Z",
+        "updateTime": "2026-10-09T02:13:24.804863Z"
+      }
+    }
+  ]
+}

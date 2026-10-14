@@ -77,6 +77,60 @@ class SleepHistoryRefreshTests(unittest.TestCase):
         self.assertTrue(all(start.hour == 22 for start in starts))
         self.assertTrue(all(end.hour == 6 for end in ends))
 
+    def test_median_inputs_prefer_db(self):
+        tz = timezone(timedelta(hours=9))
+        now = datetime(2026, 10, 7, 12, 0, tzinfo=tz)
+        db_starts = [now - timedelta(days=i, hours=14) for i in range(14)]
+        db_ends = [now - timedelta(days=i, hours=6) for i in range(14)]
+
+        with patch('storage_sqlite.get_sleep_times_for_window_db', return_value=(db_starts, db_ends)) as mock_db, \
+                patch.object(fitbit_sleep, '_sleep_file_path') as mock_json:
+            starts, ends = fitbit_sleep._get_sleep_times_for_window('user', now, 14)
+            mock_db.assert_called_once()
+            mock_json.assert_not_called()
+            self.assertEqual(starts, db_starts)
+            self.assertEqual(ends, db_ends)
+
+    def test_save_sessions_to_disk_calls_upsert_db(self):
+        tz = timezone(timedelta(hours=9))
+        now = datetime(2026, 10, 7, 12, 0, tzinfo=tz)
+        session = {
+            'start': '2026-10-06T23:00:00+09:00',
+            'end': '2026-10-07T06:00:00+09:00',
+            'raw': {'isMainSleep': True},
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.object(fitbit_sleep, '_ensure_sleep_dir', return_value=directory), \
+                    patch('storage_sqlite.upsert_sleep_sessions') as mock_upsert:
+                fitbit_sleep._save_sessions_to_disk('user', [session], now, date_tag='2026-10-07')
+                mock_upsert.assert_called_once()
+                args, _ = mock_upsert.call_args
+                self.assertEqual(args[0], 'user')
+                self.assertEqual(args[2], '2026-10-07')
+                self.assertEqual(len(args[1]), 1)
+                self.assertEqual(args[1][0]['start'], '2026-10-06T23:00:00+09:00')
+
+
+    def test_get_median_sleep_suppression_status(self):
+        tz = timezone(timedelta(hours=9))
+        now = datetime(2026, 10, 7, 23, 30, tzinfo=tz)
+        db_starts = [datetime(2026, 10, 7 - i, 23, 0, tzinfo=tz) for i in range(7)]
+        db_ends = [datetime(2026, 10, 7 - i + 1, 7, 0, tzinfo=tz) for i in range(7)]
+
+        with patch('storage_sqlite.get_sleep_times_for_window_db', return_value=(db_starts, db_ends)):
+            is_suppressed, info = fitbit_sleep.get_median_sleep_suppression_status('user', now, 7)
+            self.assertTrue(is_suppressed)
+            self.assertIsNotNone(info)
+            self.assertEqual(info['median_start'], '23:00')
+            self.assertEqual(info['median_end'], '07:00')
+            self.assertEqual(info['starts_count'], 7)
+
+            # Test daytime (not suppressed)
+            day_now = datetime(2026, 10, 7, 14, 0, tzinfo=tz)
+            is_suppressed_day, info_day = fitbit_sleep.get_median_sleep_suppression_status('user', day_now, 7)
+            self.assertFalse(is_suppressed_day)
+            self.assertIsNotNone(info_day)
+
 
 if __name__ == '__main__':
     unittest.main()

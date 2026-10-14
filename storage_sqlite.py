@@ -16,7 +16,7 @@ import logging
 import os
 import time
 import json
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Optional, List, Tuple, Dict, Any
 
 # optional dependency for file locking
@@ -102,6 +102,11 @@ def ensure_schema(db_path: str = DB_PATH):
                 pass
         else:
             logging.info('ensure_schema: no local Postgres schema file found; skipping')
+        # Ensure sleeptime table
+        try:
+            ensure_sleeptime_schema(db_path=db_path)
+        except Exception:
+            logging.debug('ensure_schema: ensure_sleeptime_schema failed')
     finally:
         try:
             conn.close()
@@ -1817,3 +1822,384 @@ def get_global_last_sent_time(db_path: str = DB_PATH) -> Optional[datetime]:
             conn.close()
         except Exception:
             pass
+
+
+def _parse_iso_dt(dt_val: Any) -> Optional[datetime]:
+    """Helper to parse datetime or ISO strings into timezone-aware datetime."""
+    if not dt_val:
+        return None
+    if isinstance(dt_val, datetime):
+        if dt_val.tzinfo is None:
+            return dt_val.replace(tzinfo=datetime.now().astimezone().tzinfo)
+        return dt_val
+    s = str(dt_val).strip()
+    try:
+        dt = datetime.fromisoformat(s)
+    except Exception:
+        try:
+            dt = datetime.strptime(s, '%Y-%m-%dT%H:%M:%S.%f')
+        except Exception:
+            try:
+                dt = datetime.strptime(s, '%Y-%m-%dT%H:%M:%S')
+            except Exception:
+                return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=datetime.now().astimezone().tzinfo)
+    return dt
+
+
+def ensure_sleeptime_schema(db_path: str = DB_PATH) -> None:
+    """Ensure that the sleeptime table and its indices exist."""
+    conn = _get_conn(db_path)
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS sleeptime (
+              id SERIAL PRIMARY KEY,
+              user_id TEXT NOT NULL,
+              sleep_date DATE NOT NULL,
+              start_time TIMESTAMPTZ NOT NULL,
+              end_time TIMESTAMPTZ NOT NULL,
+              duration_min INTEGER,
+              is_main_sleep BOOLEAN DEFAULT TRUE,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              UNIQUE (user_id, sleep_date, start_time)
+            );
+            CREATE INDEX IF NOT EXISTS idx_sleeptime_user_date ON sleeptime (user_id, sleep_date);
+            CREATE INDEX IF NOT EXISTS idx_sleeptime_user_start ON sleeptime (user_id, start_time);
+            """
+        )
+        conn.commit()
+    except Exception:
+        logging.exception('Failed to ensure sleeptime schema')
+        raise
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+def upsert_sleep_sessions(
+    user_id: str,
+    sessions: List[dict],
+    sleep_date: Any,
+    db_path: str = DB_PATH,
+) -> int:
+    """Upsert sleep sessions into the sleeptime table.
+
+    Returns the number of sessions inserted or updated.
+    """
+    if not user_id or not sessions:
+        return 0
+    ensure_sleeptime_schema(db_path=db_path)
+
+    if isinstance(sleep_date, (datetime, date)):
+        date_str = sleep_date.strftime('%Y-%m-%d')
+    else:
+        date_str = str(sleep_date)
+
+    inserted = 0
+    conn = _get_conn(db_path)
+    try:
+        cur = conn.cursor()
+        for session in sessions:
+            start_raw = session.get('start') or session.get('startTime') or session.get('startTimeLocal')
+            end_raw = session.get('end') or session.get('endTime') or session.get('endTimeLocal')
+            start_dt = _parse_iso_dt(start_raw)
+            end_dt = _parse_iso_dt(end_raw)
+            if not start_dt or not end_dt:
+                continue
+
+            duration = session.get('duration_min')
+            if duration is None:
+                try:
+                    duration = int((end_dt - start_dt).total_seconds() / 60)
+                except Exception:
+                    duration = None
+
+            raw = session.get('raw') if isinstance(session.get('raw'), dict) else {}
+            is_main = session.get('is_main_sleep')
+            if is_main is None:
+                is_main = raw.get('isMainSleep')
+            if is_main is None:
+                is_main = True
+
+            cur.execute(
+                """
+                INSERT INTO sleeptime (user_id, sleep_date, start_time, end_time, duration_min, is_main_sleep, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, now())
+                ON CONFLICT (user_id, sleep_date, start_time)
+                DO UPDATE SET
+                  end_time = EXCLUDED.end_time,
+                  duration_min = EXCLUDED.duration_min,
+                  is_main_sleep = EXCLUDED.is_main_sleep,
+                  updated_at = now()
+                """,
+                (user_id, date_str, start_dt, end_dt, duration, bool(is_main)),
+            )
+            inserted += 1
+        conn.commit()
+    except Exception:
+        logging.exception('upsert_sleep_sessions failed for user=%s, date=%s', user_id, date_str)
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+    return inserted
+
+
+def get_sleep_times_for_window_db(
+    user_id: str,
+    start_date: date,
+    end_date: date,
+    db_path: str = DB_PATH,
+) -> Tuple[List[datetime], List[datetime]]:
+    """Query sleep start and end times for a date window from the sleeptime table.
+
+    Returns (starts, ends) matching the date range [start_date, end_date].
+    For each date, prefers the session where is_main_sleep is TRUE.
+    """
+    starts = []
+    ends = []
+    conn = _get_conn(db_path)
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT sleep_date, start_time, end_time, is_main_sleep
+            FROM sleeptime
+            WHERE user_id = %s AND sleep_date >= %s AND sleep_date <= %s
+            ORDER BY sleep_date ASC, is_main_sleep DESC, start_time ASC
+            """,
+            (user_id, start_date.isoformat(), end_date.isoformat()),
+        )
+        rows = cur.fetchall()
+        # Group by sleep_date to pick one main session per day
+        by_date = {}
+        for r in rows:
+            s_date = r[0]
+            start_dt = _parse_iso_dt(r[1])
+            end_dt = _parse_iso_dt(r[2])
+            is_main = bool(r[3])
+            date_key = s_date.isoformat() if isinstance(s_date, (datetime, date)) else str(s_date)
+            if date_key not in by_date or is_main:
+                by_date[date_key] = (start_dt, end_dt)
+
+        for date_key in sorted(by_date.keys()):
+            s_dt, e_dt = by_date[date_key]
+            if s_dt and e_dt:
+                starts.append(s_dt)
+                ends.append(e_dt)
+    except Exception:
+        logging.exception('get_sleep_times_for_window_db failed for %s', user_id)
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+    return starts, ends
+
+
+def get_previous_sleep_start_db(user_id: str, days_back: int = 1, db_path: str = DB_PATH) -> Optional[datetime]:
+    """Get the sleep start time from sleeptime table for days_back days ago."""
+    target_date = datetime.now().date() - timedelta(days=days_back)
+    conn = _get_conn(db_path)
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT start_time FROM sleeptime
+            WHERE user_id = %s AND sleep_date = %s
+            ORDER BY is_main_sleep DESC, start_time ASC LIMIT 1
+            """,
+            (user_id, target_date.isoformat()),
+        )
+        r = cur.fetchone()
+        return _parse_iso_dt(r[0]) if r and r[0] else None
+    except Exception:
+        logging.exception('get_previous_sleep_start_db failed for %s', user_id)
+        return None
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+def get_recent_sleep_starts_db(user_id: str, max_items: int = 3, db_path: str = DB_PATH) -> List[datetime]:
+    """Get recent sleep start times from sleeptime table, newest first."""
+    conn = _get_conn(db_path)
+    starts = []
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT sleep_date, start_time, is_main_sleep FROM sleeptime
+            WHERE user_id = %s
+            ORDER BY sleep_date DESC, is_main_sleep DESC, start_time ASC
+            """,
+            (user_id,),
+        )
+        rows = cur.fetchall()
+        seen_dates = set()
+        for r in rows:
+            s_date = r[0]
+            if s_date in seen_dates:
+                continue
+            seen_dates.add(s_date)
+            dt = _parse_iso_dt(r[1])
+            if dt:
+                starts.append(dt)
+            if len(starts) >= max_items:
+                break
+    except Exception:
+        logging.exception('get_recent_sleep_starts_db failed for %s', user_id)
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+    return starts
+
+
+def get_previous_sleep_end_db(user_id: str, days_back: int = 1, db_path: str = DB_PATH) -> Optional[datetime]:
+    """Get the sleep end time from sleeptime table for days_back days ago."""
+    target_date = datetime.now().date() - timedelta(days=days_back)
+    conn = _get_conn(db_path)
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT end_time FROM sleeptime
+            WHERE user_id = %s AND sleep_date = %s
+            ORDER BY is_main_sleep DESC, start_time ASC LIMIT 1
+            """,
+            (user_id, target_date.isoformat()),
+        )
+        r = cur.fetchone()
+        return _parse_iso_dt(r[0]) if r and r[0] else None
+    except Exception:
+        logging.exception('get_previous_sleep_end_db failed for %s', user_id)
+        return None
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+def get_recent_sleep_ends_db(user_id: str, max_items: int = 3, db_path: str = DB_PATH) -> List[datetime]:
+    """Get recent sleep end times from sleeptime table, newest first."""
+    conn = _get_conn(db_path)
+    ends = []
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT sleep_date, end_time, is_main_sleep FROM sleeptime
+            WHERE user_id = %s
+            ORDER BY sleep_date DESC, is_main_sleep DESC, start_time ASC
+            """,
+            (user_id,),
+        )
+        rows = cur.fetchall()
+        seen_dates = set()
+        for r in rows:
+            s_date = r[0]
+            if s_date in seen_dates:
+                continue
+            seen_dates.add(s_date)
+            dt = _parse_iso_dt(r[1])
+            if dt:
+                ends.append(dt)
+            if len(ends) >= max_items:
+                break
+    except Exception:
+        logging.exception('get_recent_sleep_ends_db failed for %s', user_id)
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+    return ends
+
+
+def import_sleep_sessions_from_json(
+    base_dir: str = 'data_output',
+    target_user_id: Optional[str] = None,
+    db_path: str = DB_PATH,
+) -> int:
+    """Import sleep sessions from JSON files under base_dir into sleeptime table."""
+    ensure_sleeptime_schema(db_path=db_path)
+    user_mapping = {}
+    try:
+        conn = _get_conn(db_path)
+        cur = conn.cursor()
+        cur.execute("SELECT DISTINCT user_id FROM fitbit_tokens UNION SELECT DISTINCT user_id FROM slack_id")
+        for r in cur.fetchall():
+            u = r[0]
+            if u:
+                user_mapping[_sanitize_user_id(u)] = u
+    except Exception:
+        logging.exception('Could not fetch user mapping from DB')
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+    if not os.path.isdir(base_dir):
+        return 0
+
+    total_imported = 0
+    for user_dir_name in os.listdir(base_dir):
+        user_path = os.path.join(base_dir, user_dir_name)
+        if not os.path.isdir(user_path):
+            continue
+        sleep_dir = os.path.join(user_path, 'sleep')
+        if not os.path.isdir(sleep_dir):
+            continue
+
+        resolved_user = user_mapping.get(user_dir_name)
+        if not resolved_user:
+            if user_dir_name.endswith('_gmail_com'):
+                resolved_user = user_dir_name[:-10] + '@gmail.com'
+            else:
+                resolved_user = user_dir_name
+
+        if target_user_id and resolved_user != target_user_id and user_dir_name != target_user_id:
+            continue
+
+        for fn in os.listdir(sleep_dir):
+            if not (fn.startswith('sleep_') and fn.endswith('.json')):
+                continue
+            file_path = os.path.join(sleep_dir, fn)
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f) or {}
+                date_tag = data.get('date')
+                if not date_tag:
+                    date_tag = fn[len('sleep_'):-len('.json')]
+                sessions = data.get('sessions') or []
+                if sessions:
+                    count = upsert_sleep_sessions(resolved_user, sessions, date_tag, db_path=db_path)
+                    total_imported += count
+            except Exception:
+                logging.exception('Failed importing sleep json %s', file_path)
+    return total_imported
+
+
+def sync_sleep_json_to_db(base_dir: str = 'data_output', target_user_id: Optional[str] = None, db_path: str = DB_PATH) -> int:
+    """Convenience wrapper to sync sleep sessions from JSON files into the sleeptime table."""
+    return import_sleep_sessions_from_json(base_dir=base_dir, target_user_id=target_user_id, db_path=db_path)
+
+

@@ -10,7 +10,7 @@ excessive API calls. On error, it returns False (do not suppress notifications).
 """
 import time
 from datetime import date, datetime, timedelta, timezone
-from typing import Optional, List
+from typing import Optional, List, Dict, Any, Tuple
 import logging
 
 import os
@@ -204,6 +204,13 @@ def _save_sessions_to_disk(
     except Exception:
         logging.exception('Failed writing sleep snapshots for %s', user_id)
 
+    # persist to DB (sleeptime table)
+    try:
+        storage_sqlite.upsert_sleep_sessions(user_id, sessions_out, date_tag)
+    except Exception:
+        logging.exception('Failed upserting sleep sessions to DB for %s', user_id)
+
+
 
 def _fetch_sleep_for_window(user_id: str, start_date, end_date, tz) -> list[dict]:
     start = datetime(start_date.year, start_date.month, start_date.day, tzinfo=tz)
@@ -296,9 +303,15 @@ def save_sessions(user_id: str, sessions: List[dict], fetched_at: Optional[datet
 def get_previous_sleep_start(user_id: str, days_back: int = 1) -> Optional[datetime]:
     """Return the start datetime of the main sleep session `days_back` days before today.
 
-    Reads the per-day saved JSON under `data_output/<safe_user>/sleep/sleep_YYYY-MM-DD.json`.
-    Returns None if no file or no session found.
+    Prefers DB (sleeptime table) and falls back to saved JSON files.
     """
+    try:
+        dt = storage_sqlite.get_previous_sleep_start_db(user_id, days_back=days_back)
+        if dt is not None:
+            return dt
+    except Exception:
+        logging.exception('get_previous_sleep_start_db failed for %s', user_id)
+
     try:
         safe = storage_sqlite._sanitize_user_id(user_id)
         target_date = (datetime.now().date() - timedelta(days=days_back)).strftime('%Y-%m-%d')
@@ -331,11 +344,17 @@ def get_previous_sleep_start(user_id: str, days_back: int = 1) -> Optional[datet
 
 
 def get_recent_sleep_starts(user_id: str, max_items: int = 3) -> List[datetime]:
-    """Return a list of available sleep start datetimes from saved files, newest first.
+    """Return a list of available sleep start datetimes, newest first.
 
-    Scans `data_output/<safe_user>/sleep/` for `sleep_YYYY-MM-DD.json` files and extracts
-    the preferred session start (main sleep if present). Returns at most `max_items` datetimes.
+    Prefers DB (sleeptime table) and falls back to saved JSON files.
     """
+    try:
+        starts = storage_sqlite.get_recent_sleep_starts_db(user_id, max_items=max_items)
+        if starts:
+            return starts
+    except Exception:
+        logging.exception('get_recent_sleep_starts_db failed for %s', user_id)
+
     starts = []
     try:
         safe = storage_sqlite._sanitize_user_id(user_id)
@@ -514,9 +533,15 @@ def _find_night_null_start(user_id: str, night_start_hour: int = 20, night_end_h
 def get_previous_sleep_end(user_id: str, days_back: int = 1) -> Optional[datetime]:
     """Return the end datetime of the main sleep session `days_back` days before today.
 
-    Reads the per-day saved JSON under `data_output/<safe_user>/sleep/sleep_YYYY-MM-DD.json`.
-    Returns None if no file or no session found.
+    Prefers DB (sleeptime table) and falls back to saved JSON files.
     """
+    try:
+        dt = storage_sqlite.get_previous_sleep_end_db(user_id, days_back=days_back)
+        if dt is not None:
+            return dt
+    except Exception:
+        logging.exception('get_previous_sleep_end_db failed for %s', user_id)
+
     try:
         safe = storage_sqlite._sanitize_user_id(user_id)
         target_date = (datetime.now().date() - timedelta(days=days_back)).strftime('%Y-%m-%d')
@@ -549,7 +574,17 @@ def get_previous_sleep_end(user_id: str, days_back: int = 1) -> Optional[datetim
 
 
 def get_recent_sleep_ends(user_id: str, max_items: int = 3) -> List[datetime]:
-    """Return a list of available sleep end datetimes from saved files, newest first."""
+    """Return a list of available sleep end datetimes, newest first.
+
+    Prefers DB (sleeptime table) and falls back to saved JSON files.
+    """
+    try:
+        ends = storage_sqlite.get_recent_sleep_ends_db(user_id, max_items=max_items)
+        if ends:
+            return ends
+    except Exception:
+        logging.exception('get_recent_sleep_ends_db failed for %s', user_id)
+
     ends = []
     try:
         safe = storage_sqlite._sanitize_user_id(user_id)
@@ -629,6 +664,17 @@ def _median(values: List[int]) -> Optional[float]:
 
 
 def _get_sleep_times_for_window(user_id: str, now: datetime, max_days: int):
+    # Try DB (sleeptime table) first
+    try:
+        start_date = now.date() - timedelta(days=max_days - 1)
+        end_date = now.date()
+        starts, ends = storage_sqlite.get_sleep_times_for_window_db(user_id, start_date, end_date)
+        if starts and ends:
+            return starts, ends
+    except Exception:
+        logging.exception('get_sleep_times_for_window_db failed for %s', user_id)
+
+    # Fallback to saved JSON files
     starts = []
     ends = []
     for offset in range(max_days):
@@ -657,23 +703,44 @@ def _get_sleep_times_for_window(user_id: str, now: datetime, max_days: int):
     return starts, ends
 
 
-def is_in_median_sleep_window(user_id: str, now: datetime, max_items: int = 14) -> bool:
-    """Return True when `now` is inside the user's median sleep time window.
+def _night_axis_minutes_to_time_str(minutes: float) -> str:
+    """Format night axis minutes back to HH:MM format."""
+    total_min = int(round(minutes)) % (24 * 60)
+    h = total_min // 60
+    m = total_min % 60
+    return f"{h:02d}:{m:02d}"
 
-    - Uses saved sleep sessions from today and the preceding `max_items - 1` dates.
-    - If no usable data exists, returns False.
+
+def get_median_sleep_suppression_status(
+    user_id: str,
+    now: datetime,
+    max_items: int = 14,
+) -> Tuple[bool, Optional[Dict[str, Any]]]:
+    """Check if `now` is within the median sleep window and return window details.
+
+    Uses sleep start and end times queried from the database (falling back to JSON).
+
+    Returns:
+        (is_suppressed, info_dict)
+        where info_dict contains:
+          - 'median_start': str (HH:MM)
+          - 'median_end': str (HH:MM)
+          - 'median_start_minutes': float
+          - 'median_end_minutes': float
+          - 'starts_count': int
+          - 'ends_count': int
     """
     try:
         starts, ends = _get_sleep_times_for_window(user_id, now, max_items)
         if not starts or not ends:
-            return False
+            return False, None
 
         start_minutes = [_time_to_night_axis_minutes(d) for d in starts]
         end_minutes = [_time_to_night_axis_minutes(d) for d in ends]
         median_start = _median(start_minutes)
         median_end = _median(end_minutes)
         if median_start is None or median_end is None:
-            return False
+            return False, None
 
         if median_end <= median_start:
             median_end += 24 * 60
@@ -682,10 +749,30 @@ def is_in_median_sleep_window(user_id: str, now: datetime, max_items: int = 14) 
         if now_minutes < median_start:
             now_minutes += 24 * 60
 
-        return median_start <= now_minutes <= median_end
+        is_sleeping = median_start <= now_minutes <= median_end
+        info = {
+            'median_start': _night_axis_minutes_to_time_str(median_start),
+            'median_end': _night_axis_minutes_to_time_str(median_end),
+            'median_start_minutes': median_start,
+            'median_end_minutes': median_end,
+            'starts_count': len(starts),
+            'ends_count': len(ends),
+        }
+        return is_sleeping, info
     except Exception:
-        logging.exception('is_in_median_sleep_window failed for %s', user_id)
-        return False
+        logging.exception('get_median_sleep_suppression_status failed for %s', user_id)
+        return False, None
+
+
+def is_in_median_sleep_window(user_id: str, now: datetime, max_items: int = 14) -> bool:
+    """Return True when `now` is inside the user's median sleep time window.
+
+    - Uses saved sleep sessions from today and the preceding `max_items - 1` dates.
+    - If no usable data exists, returns False.
+    """
+    is_sleeping, _ = get_median_sleep_suppression_status(user_id, now, max_items=max_items)
+    return is_sleeping
+
 
 
 def get_effective_wake_time(user_id: str, max_recent: int = 3, fallback_hour: int = 7):
