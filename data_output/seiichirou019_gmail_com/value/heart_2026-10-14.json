@@ -5705,6 +5705,12 @@
       "heart_rate": null,
       "steps": null,
       "calories": 1.0929
+    },
+    {
+      "time": "15:52:00",
+      "heart_rate": null,
+      "steps": null,
+      "calories": 1.0929
     }
   ],
   "calculated_value": {
