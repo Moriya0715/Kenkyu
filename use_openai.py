@@ -353,7 +353,7 @@ def generate_notification_payload(
     if client is None:
         return {'category': None, 'message': fallback_message or '', 'rationale': '', 'reps': None, 'sets': None, 'duration_min': None}
 
-    model = os.environ.get('OPENAI_NOTIFICATION_MODEL', 'gpt-4o-mini')
+    model = os.environ.get('OPENAI_NOTIFICATION_MODEL', 'gpt-5-mini')
     prompt = _build_prompt(event_type, user_id, context)
 
     try:
