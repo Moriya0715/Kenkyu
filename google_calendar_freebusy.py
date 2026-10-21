@@ -275,7 +275,7 @@ def format_iso(dt):
     return dt.isoformat()
 
 
-def main(account_id: str = None):
+def main(account_id: str = None, target_date=None):
     # Settings per user's choices
     calendar_id = account_id or 'seiichirou019@gmail.com'
     min_slot_minutes = 30
@@ -286,7 +286,7 @@ def main(account_id: str = None):
 
     # use timezone-aware 'now' so comparisons with API datetimes (which include offsets) work
     now = datetime.now().astimezone()
-    today = now.date()
+    today = target_date or now.date()
     # period: today 00:00:00 .. today 23:59:59
     time_min = datetime.combine(today, time(0, 0, 0)).replace(tzinfo=now.tzinfo)
     # make time_max timezone-aware using same tzinfo as now

@@ -1,7 +1,7 @@
 """Authorize Google Health API and save its credentials in fitbit_tokens.
 
 Usage:
-    python import_fitbit_tokens_from_json.py --json fitbit_token.json --user-id user@example.com
+    python import_fitbit_tokens_from_json.py --json fitbit_token_railway.json --user-id user@example.com
 
 The JSON file is the OAuth client configuration downloaded from Google Cloud.
 This program opens a browser, receives the local OAuth callback, and stores the

@@ -1,0 +1,77 @@
+{
+  "date": "2026-10-21",
+  "fetched_at": "2026-10-21T17:25:58.038311+09:00",
+  "source": "google_health",
+  "sessions": [
+    {
+      "start": "2026-10-20T15:48:00Z",
+      "end": "2026-10-20T16:33:00Z",
+      "duration_min": 45,
+      "raw": {
+        "interval": {
+          "startTime": "2026-10-20T15:48:00Z",
+          "startUtcOffset": "32400s",
+          "endTime": "2026-10-20T16:33:00Z",
+          "endUtcOffset": "32400s"
+        },
+        "type": "STAGES",
+        "stages": [
+          {
+            "startTime": "2026-10-20T15:48:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-10-20T16:13:00Z",
+            "endUtcOffset": "32400s",
+            "type": "AWAKE",
+            "createTime": "2026-10-20T20:07:13.509183Z",
+            "updateTime": "2026-10-20T20:07:13.509183Z"
+          },
+          {
+            "startTime": "2026-10-20T16:13:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-10-20T16:33:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT",
+            "createTime": "2026-10-20T20:07:13.509183Z",
+            "updateTime": "2026-10-20T20:07:13.509183Z"
+          }
+        ],
+        "metadata": {
+          "stagesStatus": "SUCCEEDED",
+          "processed": true,
+          "nap": true,
+          "mainSleep": true
+        },
+        "summary": {
+          "minutesInSleepPeriod": "45",
+          "minutesAfterWakeUp": "0",
+          "minutesToFallAsleep": "0",
+          "minutesAsleep": "20",
+          "minutesAwake": "25",
+          "stagesSummary": [
+            {
+              "type": "AWAKE",
+              "minutes": "25",
+              "count": "1"
+            },
+            {
+              "type": "LIGHT",
+              "minutes": "20",
+              "count": "1"
+            }
+          ]
+        },
+        "createTime": "2026-10-20T20:07:02.154479Z",
+        "updateTime": "2026-10-20T21:07:26.763279Z",
+        "shortAwakenings": [
+          {
+            "startTime": "2026-10-20T16:14:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-10-20T16:16:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          }
+        ]
+      }
+    }
+  ]
+}
