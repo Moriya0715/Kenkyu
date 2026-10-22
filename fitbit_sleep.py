@@ -321,18 +321,10 @@ def get_previous_sleep_start(user_id: str, days_back: int = 1) -> Optional[datet
             return None
         with open(fname, 'r', encoding='utf-8') as f:
             obj = json.load(f)
-        sessions = obj.get('sessions') or []
+        sessions = _main_sleep_sessions(obj.get('sessions') or [])
         if not sessions:
             return None
-        # prefer session with raw.isMainSleep true
-        chosen = None
-        for s in sessions:
-            raw = s.get('raw') or {}
-            if raw.get('isMainSleep'):
-                chosen = s
-                break
-        if chosen is None:
-            chosen = sessions[0]
+        chosen = min(sessions, key=lambda s: s.get('start') or (s.get('raw') or {}).get('startTime') or '')
         start = chosen.get('start') or (chosen.get('raw') or {}).get('startTime')
         if not start:
             return None
@@ -374,17 +366,10 @@ def get_recent_sleep_starts(user_id: str, max_items: int = 3) -> List[datetime]:
             try:
                 with open(path, 'r', encoding='utf-8') as f:
                     obj = json.load(f)
-                sessions = obj.get('sessions') or []
+                sessions = _main_sleep_sessions(obj.get('sessions') or [])
                 if not sessions:
                     continue
-                chosen = None
-                for s in sessions:
-                    raw = s.get('raw') or {}
-                    if raw.get('isMainSleep'):
-                        chosen = s
-                        break
-                if chosen is None:
-                    chosen = sessions[0]
+                chosen = min(sessions, key=lambda s: s.get('start') or (s.get('raw') or {}).get('startTime') or '')
                 start = chosen.get('start') or (chosen.get('raw') or {}).get('startTime')
                 if not start:
                     continue
@@ -551,18 +536,10 @@ def get_previous_sleep_end(user_id: str, days_back: int = 1) -> Optional[datetim
             return None
         with open(fname, 'r', encoding='utf-8') as f:
             obj = json.load(f)
-        sessions = obj.get('sessions') or []
+        sessions = _main_sleep_sessions(obj.get('sessions') or [])
         if not sessions:
             return None
-        # prefer session with raw.isMainSleep true
-        chosen = None
-        for s in sessions:
-            raw = s.get('raw') or {}
-            if raw.get('isMainSleep'):
-                chosen = s
-                break
-        if chosen is None:
-            chosen = sessions[0]
+        chosen = max(sessions, key=lambda s: s.get('end') or (s.get('raw') or {}).get('endTime') or '')
         end = chosen.get('end') or (chosen.get('raw') or {}).get('endTime')
         if not end:
             return None
@@ -600,17 +577,10 @@ def get_recent_sleep_ends(user_id: str, max_items: int = 3) -> List[datetime]:
             try:
                 with open(path, 'r', encoding='utf-8') as f:
                     obj = json.load(f)
-                sessions = obj.get('sessions') or []
+                sessions = _main_sleep_sessions(obj.get('sessions') or [])
                 if not sessions:
                     continue
-                chosen = None
-                for s in sessions:
-                    raw = s.get('raw') or {}
-                    if raw.get('isMainSleep'):
-                        chosen = s
-                        break
-                if chosen is None:
-                    chosen = sessions[0]
+                chosen = max(sessions, key=lambda s: s.get('end') or (s.get('raw') or {}).get('endTime') or '')
                 end = chosen.get('end') or (chosen.get('raw') or {}).get('endTime')
                 if not end:
                     continue
@@ -663,6 +633,11 @@ def _median(values: List[int]) -> Optional[float]:
     return (ordered[mid - 1] + ordered[mid]) / 2.0
 
 
+def _main_sleep_sessions(sessions: List[dict]) -> List[dict]:
+    """Return only main (non-nap) sessions using the same rule as the DB insert."""
+    return [s for s in sessions if storage_sqlite.resolve_is_main_sleep(s)]
+
+
 def _get_sleep_times_for_window(user_id: str, now: datetime, max_days: int):
     # Try DB (sleeptime table) first
     try:
@@ -684,20 +659,15 @@ def _get_sleep_times_for_window(user_id: str, now: datetime, max_days: int):
             continue
         try:
             with open(path, 'r', encoding='utf-8') as f:
-                sessions = (json.load(f) or {}).get('sessions') or []
-            if not sessions:
-                continue
-            chosen = next(
-                (session for session in sessions if (session.get('raw') or {}).get('isMainSleep')),
-                sessions[0],
-            )
-            start_value = chosen.get('start') or (chosen.get('raw') or {}).get('startTime')
-            end_value = chosen.get('end') or (chosen.get('raw') or {}).get('endTime')
-            start_dt = _parse_iso(start_value) if start_value else None
-            end_dt = _parse_iso(end_value) if end_value else None
-            if start_dt is not None and end_dt is not None:
-                starts.append(start_dt)
-                ends.append(end_dt)
+                sessions = _main_sleep_sessions((json.load(f) or {}).get('sessions') or [])
+            for chosen in sessions:
+                start_value = chosen.get('start') or (chosen.get('raw') or {}).get('startTime')
+                end_value = chosen.get('end') or (chosen.get('raw') or {}).get('endTime')
+                start_dt = _parse_iso(start_value) if start_value else None
+                end_dt = _parse_iso(end_value) if end_value else None
+                if start_dt is not None and end_dt is not None:
+                    starts.append(start_dt)
+                    ends.append(end_dt)
         except Exception:
             logging.exception('Failed reading sleep file %s', path)
     return starts, ends

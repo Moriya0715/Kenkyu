@@ -1882,6 +1882,34 @@ def ensure_sleeptime_schema(db_path: str = DB_PATH) -> None:
             pass
 
 
+# Sessions with no explicit isMainSleep flag are treated as naps when this long or shorter.
+MAIN_SLEEP_MIN_MINUTES = 120
+
+
+def resolve_is_main_sleep(session: dict, duration_min: Optional[int] = None) -> bool:
+    """Decide whether a sleep session is a main (night) sleep.
+
+    Priority: explicit flag (`is_main_sleep` / `raw.isMainSleep`), then duration > MAIN_SLEEP_MIN_MINUTES.
+    """
+    flag = session.get('is_main_sleep')
+    if flag is None:
+        raw = session.get('raw') if isinstance(session.get('raw'), dict) else {}
+        flag = raw.get('isMainSleep')
+    if flag is not None:
+        return bool(flag)
+
+    if duration_min is None:
+        duration_min = session.get('duration_min')
+    if duration_min is None:
+        start_dt = _parse_iso_dt(session.get('start') or session.get('startTime') or session.get('startTimeLocal'))
+        end_dt = _parse_iso_dt(session.get('end') or session.get('endTime') or session.get('endTimeLocal'))
+        if start_dt and end_dt:
+            duration_min = int((end_dt - start_dt).total_seconds() / 60)
+    if duration_min is None:
+        return False
+    return duration_min > MAIN_SLEEP_MIN_MINUTES
+
+
 def upsert_sleep_sessions(
     user_id: str,
     sessions: List[dict],
@@ -1920,12 +1948,7 @@ def upsert_sleep_sessions(
                 except Exception:
                     duration = None
 
-            raw = session.get('raw') if isinstance(session.get('raw'), dict) else {}
-            is_main = session.get('is_main_sleep')
-            if is_main is None:
-                is_main = raw.get('isMainSleep')
-            if is_main is None:
-                is_main = True
+            is_main = resolve_is_main_sleep(session, duration)
 
             cur.execute(
                 """
@@ -1966,7 +1989,7 @@ def get_sleep_times_for_window_db(
     """Query sleep start and end times for a date window from the sleeptime table.
 
     Returns (starts, ends) matching the date range [start_date, end_date].
-    For each date, prefers the session where is_main_sleep is TRUE.
+    For each date, all sessions where is_main_sleep is TRUE are returned (naps are excluded).
     """
     starts = []
     ends = []
@@ -1975,27 +1998,17 @@ def get_sleep_times_for_window_db(
         cur = conn.cursor()
         cur.execute(
             """
-            SELECT sleep_date, start_time, end_time, is_main_sleep
+            SELECT start_time, end_time
             FROM sleeptime
             WHERE user_id = %s AND sleep_date >= %s AND sleep_date <= %s
-            ORDER BY sleep_date ASC, is_main_sleep DESC, start_time ASC
+              AND is_main_sleep = TRUE
+            ORDER BY sleep_date ASC, start_time ASC
             """,
             (user_id, start_date.isoformat(), end_date.isoformat()),
         )
-        rows = cur.fetchall()
-        # Group by sleep_date to pick one main session per day
-        by_date = {}
-        for r in rows:
-            s_date = r[0]
-            start_dt = _parse_iso_dt(r[1])
-            end_dt = _parse_iso_dt(r[2])
-            is_main = bool(r[3])
-            date_key = s_date.isoformat() if isinstance(s_date, (datetime, date)) else str(s_date)
-            if date_key not in by_date or is_main:
-                by_date[date_key] = (start_dt, end_dt)
-
-        for date_key in sorted(by_date.keys()):
-            s_dt, e_dt = by_date[date_key]
+        for r in cur.fetchall():
+            s_dt = _parse_iso_dt(r[0])
+            e_dt = _parse_iso_dt(r[1])
             if s_dt and e_dt:
                 starts.append(s_dt)
                 ends.append(e_dt)
@@ -2018,8 +2031,8 @@ def get_previous_sleep_start_db(user_id: str, days_back: int = 1, db_path: str =
         cur.execute(
             """
             SELECT start_time FROM sleeptime
-            WHERE user_id = %s AND sleep_date = %s
-            ORDER BY is_main_sleep DESC, start_time ASC LIMIT 1
+            WHERE user_id = %s AND sleep_date = %s AND is_main_sleep = TRUE
+            ORDER BY start_time ASC LIMIT 1
             """,
             (user_id, target_date.isoformat()),
         )
@@ -2044,8 +2057,8 @@ def get_recent_sleep_starts_db(user_id: str, max_items: int = 3, db_path: str = 
         cur.execute(
             """
             SELECT sleep_date, start_time, is_main_sleep FROM sleeptime
-            WHERE user_id = %s
-            ORDER BY sleep_date DESC, is_main_sleep DESC, start_time ASC
+            WHERE user_id = %s AND is_main_sleep = TRUE
+            ORDER BY sleep_date DESC, start_time ASC
             """,
             (user_id,),
         )
@@ -2080,8 +2093,8 @@ def get_previous_sleep_end_db(user_id: str, days_back: int = 1, db_path: str = D
         cur.execute(
             """
             SELECT end_time FROM sleeptime
-            WHERE user_id = %s AND sleep_date = %s
-            ORDER BY is_main_sleep DESC, start_time ASC LIMIT 1
+            WHERE user_id = %s AND sleep_date = %s AND is_main_sleep = TRUE
+            ORDER BY end_time DESC LIMIT 1
             """,
             (user_id, target_date.isoformat()),
         )
@@ -2106,8 +2119,8 @@ def get_recent_sleep_ends_db(user_id: str, max_items: int = 3, db_path: str = DB
         cur.execute(
             """
             SELECT sleep_date, end_time, is_main_sleep FROM sleeptime
-            WHERE user_id = %s
-            ORDER BY sleep_date DESC, is_main_sleep DESC, start_time ASC
+            WHERE user_id = %s AND is_main_sleep = TRUE
+            ORDER BY sleep_date DESC, end_time DESC
             """,
             (user_id,),
         )

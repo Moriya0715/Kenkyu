@@ -132,5 +132,32 @@ class SleepHistoryRefreshTests(unittest.TestCase):
             self.assertIsNotNone(info_day)
 
 
+    def test_resolve_is_main_sleep_priority_and_threshold(self):
+        import storage_sqlite
+        resolve = storage_sqlite.resolve_is_main_sleep
+        self.assertTrue(resolve({'raw': {'isMainSleep': True}}, 30))
+        self.assertFalse(resolve({'raw': {'isMainSleep': False}}, 600))
+        self.assertFalse(resolve({'raw': {}}, 120))
+        self.assertTrue(resolve({'raw': {}}, 121))
+        self.assertFalse(resolve({'start': '2026-10-07T14:00:00+09:00', 'end': '2026-10-07T15:00:00+09:00'}))
+        self.assertTrue(resolve({'start': '2026-10-06T23:00:00+09:00', 'end': '2026-10-07T06:00:00+09:00'}))
+
+    def test_json_fallback_excludes_naps(self):
+        tz = timezone(timedelta(hours=9))
+        now = datetime(2026, 10, 7, 12, 0, tzinfo=tz)
+        payload = {'sessions': [
+            {'start': '2026-10-07T14:00:00+09:00', 'end': '2026-10-07T15:00:00+09:00', 'raw': {}},
+        ]}
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, 'nap.json')
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(payload, f)
+            with patch('storage_sqlite.get_sleep_times_for_window_db', return_value=([], [])), \
+                    patch.object(fitbit_sleep, '_sleep_file_path', return_value=path):
+                starts, ends = fitbit_sleep._get_sleep_times_for_window('user', now, 1)
+        self.assertEqual(starts, [])
+        self.assertEqual(ends, [])
+
+
 if __name__ == '__main__':
     unittest.main()
