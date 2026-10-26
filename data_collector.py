@@ -1,4 +1,4 @@
-﻿"""
+"""
 data_collector.py
 
 Slack 通知を行わず、データ取得と保存のみを行うプログラム。
@@ -9,12 +9,19 @@ Slack 通知を行わず、データ取得と保存のみを行うプログラ�
   - Google Calendar 予定(free)    -> data_output/<user>/date/freebusy_YYYY-MM-DD.csv
 
 実行日の前日 0:00 から実行時点までを対象に、DB 内の全ユーザー分を1回取得して終了する。
-Railway の Cron から `python data_collector.py` で起動する想定（定期実行は Cron 側で行う）。
+常駐してポーリングする（既定 3600 秒間隔）。
+  python data_collector.py                 # 環境変数 COLLECT_INTERVAL_SECONDS または 3600 秒
+  python data_collector.py --interval 600  # 600 秒間隔
+  python data_collector.py --once          # 1回だけ実行して終了（Cron 併用・動作確認用）
 """
 
+import argparse
 import logging
 import os
+import signal
 import sys
+import threading
+import time
 from datetime import date, datetime, timedelta, timezone
 from typing import List
 
@@ -105,15 +112,50 @@ def collect_user(user_id: str, now: datetime):
             logging.exception('Collecting %s failed for user=%s', name, user_id)
 
 
-def main():
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
+def run_once() -> bool:
     users = get_users()
     if not users:
         logging.error('No users found in DB.')
-        return 1
+        return False
     now = datetime.now().astimezone()
     for user in users:
         collect_user(user, now)
+    return True
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Fitbit / Google Calendar データ収集（定期ポーリング）')
+    parser.add_argument(
+        '--interval',
+        type=int,
+        default=int(os.getenv('COLLECT_INTERVAL_SECONDS', '3600')),
+        help='ポーリング間隔（秒）。既定: 環境変数 COLLECT_INTERVAL_SECONDS または 3600',
+    )
+    parser.add_argument('--once', action='store_true', help='1回だけ実行して終了する')
+    args = parser.parse_args()
+    if args.interval <= 0:
+        parser.error('--interval は1以上の秒数を指定してください')
+
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
+
+    if args.once:
+        return 0 if run_once() else 1
+
+    stop = threading.Event()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        signal.signal(sig, lambda *_: stop.set())
+
+    logging.info('Polling started: interval=%ss', args.interval)
+    while not stop.is_set():
+        started = time.monotonic()
+        try:
+            run_once()
+        except Exception:
+            logging.exception('Polling cycle failed')
+        wait = max(0.0, args.interval - (time.monotonic() - started))
+        logging.info('Next run in %.0fs', wait)
+        stop.wait(wait)
+    logging.info('Polling stopped.')
     return 0
 
 
