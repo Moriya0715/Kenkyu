@@ -62,7 +62,7 @@ def _get_conn(path: str = DB_PATH):
 VALUE_JSON_DIR = os.path.join('data_output', 'value')
 
 # 0 is Monday and 6 is Sunday. Change this value to change the weekly boundary.
-WEEK_START_WEEKDAY = 0
+WEEK_START_WEEKDAY = 2
 # WEEK_START_WEEKDAY = 6  # Use this instead when weeks should start on Sunday.
 
 
@@ -954,74 +954,41 @@ def upsert_response_by_notification_id(
     ) or 0
 
 
-def get_recent_exercise_history(user_id: str, limit: int = 5, db_path: str = DB_PATH) -> List[Dict[str, Any]]:
+def get_recent_exercise_history(user_id: str, limit: int = 10, db_path: str = DB_PATH) -> List[Dict[str, Any]]:
     """Return recent sent notifications joined with their latest responses.
 
-    The result is ordered from newest to oldest and intentionally excludes the
-    original message_text so prompt payloads stay compact.
+    The result is ordered from newest to oldest and includes the notification
+    text so the AI can use prior exercise suggestions as context.
     """
     con = _get_conn(db_path)
     try:
         cur = con.cursor()
-        try:
-            cur.execute(
-                '''
-                    SELECT
-                        s.notification_id,
-                        s.exercise_name,
-                        s.exercise_type,
-                        s.sent_at,
-                        s.reps,
-                        s.sets,
-                        s.duration_min,
-                        s.ai_category,
-                        s.ai_rationale,
-                        r.response_status,
-                        r.implemented_flag,
-                        r.not_implemented_reason,
-                        r.visibility_before,
-                        r.perceived_exertion,
-                        r.updated_at AS response_updated_at
-                    FROM sent_exercise_notifications AS s
-                    LEFT JOIN received_exercise_responses AS r
-                        ON r.notification_id = s.notification_id
-                    WHERE s.user_id = %s
-                    ORDER BY s.sent_at DESC, s.id DESC
-                    LIMIT %s
-                ''',
-                (user_id, limit),
-            )
-        except Exception as exc:
-            # fallback for older schema
-            if 'no such column' not in str(exc).lower():
-                raise
-            cur.execute(
-                '''
-                    SELECT
-                        s.notification_id,
-                        s.exercise_name,
-                        s.exercise_type,
-                        s.sent_at,
-                        s.reps,
-                        s.sets,
-                        s.duration_min,
-                        NULL AS ai_category,
-                        NULL AS ai_rationale,
-                        r.response_status,
-                        r.implemented_flag,
-                        r.not_implemented_reason,
-                        r.visibility_before,
-                        r.perceived_exertion,
-                        r.updated_at AS response_updated_at
-                    FROM sent_exercise_notifications AS s
-                    LEFT JOIN received_exercise_responses AS r
-                        ON r.notification_id = s.notification_id
-                    WHERE s.user_id = %s
-                    ORDER BY s.sent_at DESC, s.id DESC
-                    LIMIT %s
-                ''',
-                (user_id, limit),
-            )
+        cur.execute(
+            '''
+                SELECT
+                    s.notification_id,
+                    s.exercise_name,
+                    s.exercise_type,
+                    s.sent_at,
+                    s.reps,
+                    s.sets,
+                    s.duration_min,
+                    s.message_text,
+                    r.response_status,
+                    r.implemented_flag,
+                    r.not_implemented_reason,
+                    r.visibility_before,
+                    r.perceived_exertion,
+                    r.updated_at AS response_updated_at
+                FROM sent_exercise_notifications AS s
+                LEFT JOIN received_exercise_responses AS r
+                    ON r.notification_id = s.notification_id
+                WHERE s.user_id = %s
+                ORDER BY s.sent_at DESC, s.id DESC
+                LIMIT %s
+            ''',
+            (user_id, limit),
+        )
         columns = [desc[0] for desc in cur.description]
         rows: List[Dict[str, Any]] = []
         for row in cur.fetchall():
@@ -1170,11 +1137,11 @@ def get_weekly_implemented_exercise_counts(
     }
 
 
-def get_recent_exercise_context(user_id: str, limit: int = 5, db_path: str = DB_PATH) -> Dict[str, Any]:
+def get_recent_exercise_context(user_id: str, limit: int = 10, db_path: str = DB_PATH) -> Dict[str, Any]:
     """Build a compact context payload for AI prompt generation.
 
-    This keeps message_text out of the payload and returns only fields that are
-    directly useful for exercise selection, justification, and personalization.
+    Recent notification text and response details provide context for exercise
+    selection, justification, and personalization.
     """
     return {
         'recent_exercises': get_recent_exercise_history(user_id, limit=limit, db_path=db_path),
@@ -1189,32 +1156,39 @@ def build_exercise_ai_input(
     exercise_name: Optional[str] = None,
     event: Optional[Dict[str, Any]] = None,
     pre_survey: Optional[Dict[str, Any]] = None,
-    limit: int = 5,
+    limit: int = 10,
     db_path: str = DB_PATH,
 ) -> Dict[str, Any]:
     """Build the compact AI input payload for exercise message generation.
 
-    The payload intentionally excludes raw physiological samples and message_text.
-    Only high-level metadata and DB-derived history are included.
+    The payload intentionally excludes raw physiological samples while including
+    recent notification text and response history.
     """
     event = event or {}
     recent_context = get_recent_exercise_context(user_id, limit=limit, db_path=db_path)
     recent_exercises = []
     for row in recent_context.get('recent_exercises', []):
+        sent_at = row.get('sent_at')
+        if hasattr(sent_at, 'isoformat'):
+            sent_at = sent_at.isoformat()
+        response_updated_at = row.get('response_updated_at')
+        if hasattr(response_updated_at, 'isoformat'):
+            response_updated_at = response_updated_at.isoformat()
         recent_exercises.append({
+            'notification_id': row.get('notification_id'),
             'exercise_name': row.get('exercise_name'),
             'exercise_type': row.get('exercise_type'),
-            'sent_at': row.get('sent_at'),
+            'sent_at': sent_at,
             'reps': row.get('reps'),
             'sets': row.get('sets'),
             'duration_min': row.get('duration_min'),
-            'ai_category': row.get('ai_category'),
-            'ai_rationale': row.get('ai_rationale'),
+            'message_text': row.get('message_text'),
             'response_status': row.get('response_status'),
             'implemented_flag': row.get('implemented_flag'),
             'not_implemented_reason': row.get('not_implemented_reason'),
             'visibility_before': row.get('visibility_before'),
             'perceived_exertion': row.get('perceived_exertion'),
+            'response_updated_at': response_updated_at,
         })
 
     adherence_by_type = []
@@ -2214,5 +2188,3 @@ def import_sleep_sessions_from_json(
 def sync_sleep_json_to_db(base_dir: str = 'data_output', target_user_id: Optional[str] = None, db_path: str = DB_PATH) -> int:
     """Convenience wrapper to sync sleep sessions from JSON files into the sleeptime table."""
     return import_sleep_sessions_from_json(base_dir=base_dir, target_user_id=target_user_id, db_path=db_path)
-
-
