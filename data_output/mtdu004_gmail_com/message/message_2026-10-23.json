@@ -1,0 +1,14 @@
+{
+  "messages": [
+    {
+      "user_id": "mtdu004@gmail.com",
+      "timestamp": "2026-10-23T14:10:01.313637",
+      "exercise_type": "stretch",
+      "implemented": "yes",
+      "pre_survey": {},
+      "post_survey": {
+        "implemented": "yes"
+      }
+    }
+  ]
+}

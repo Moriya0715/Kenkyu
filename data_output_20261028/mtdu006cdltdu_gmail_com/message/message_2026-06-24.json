@@ -1,0 +1,94 @@
+{
+  "messages": [
+    {
+      "user_id": "mtdu006cdltdu@gmail.com",
+      "timestamp": "2026-06-24T16:23:02.818043",
+      "exercise_type": "strength",
+      "implemented": "yes",
+      "pre_survey": {
+        "visibility": "yes"
+      },
+      "post_survey": {
+        "implemented": "yes",
+        "intensity": 8,
+        "reason": "other",
+        "other_reason": "すでに実施したため"
+      }
+    },
+    {
+      "user_id": "mtdu006cdltdu@gmail.com",
+      "timestamp": "2026-06-24T16:23:11.800257",
+      "exercise_type": "strength",
+      "implemented": "no",
+      "pre_survey": {
+        "visibility": "yes"
+      },
+      "post_survey": {
+        "implemented": "no",
+        "intensity": 8,
+        "reason": "no_time",
+        "other_reason": "すでに実施したため"
+      }
+    },
+    {
+      "user_id": "mtdu006cdltdu@gmail.com",
+      "timestamp": "2026-06-24T16:24:12.359985",
+      "exercise_type": "strength",
+      "implemented": "yes",
+      "pre_survey": {
+        "visibility": "yes"
+      },
+      "post_survey": {
+        "implemented": "yes",
+        "intensity": 8,
+        "reason": "no_time",
+        "other_reason": "すでに実施したため"
+      }
+    },
+    {
+      "user_id": "mtdu006cdltdu@gmail.com",
+      "timestamp": "2026-06-24T16:24:51.485578",
+      "exercise_type": "strength",
+      "implemented": "yes",
+      "pre_survey": {
+        "visibility": "yes"
+      },
+      "post_survey": {
+        "implemented": "yes",
+        "intensity": 8,
+        "reason": "no_time",
+        "other_reason": "すでに実施したため"
+      }
+    },
+    {
+      "user_id": "mtdu006cdltdu@gmail.com",
+      "timestamp": "2026-06-24T16:24:58.508523",
+      "exercise_type": "strength",
+      "implemented": "no",
+      "pre_survey": {
+        "visibility": "yes"
+      },
+      "post_survey": {
+        "implemented": "no",
+        "intensity": 8,
+        "reason": "no_motivation",
+        "other_reason": "すでに実施したため"
+      }
+    },
+    {
+      "user_id": "mtdu006cdltdu@gmail.com",
+      "timestamp": "2026-06-24T16:25:08.497967",
+      "exercise_type": "strength",
+      "implemented": "yes",
+      "pre_survey": {
+        "visibility": "yes"
+      },
+      "post_survey": {
+        "implemented": "yes",
+        "intensity": 6,
+        "reason": "no_motivation",
+        "other_reason": "すでに実施したため"
+      }
+    }
+  ]
+}

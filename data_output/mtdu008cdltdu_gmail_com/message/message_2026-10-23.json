@@ -1,0 +1,15 @@
+{
+  "messages": [
+    {
+      "user_id": "mtdu008cdltdu@gmail.com",
+      "timestamp": "2026-10-23T14:05:51.623645",
+      "exercise_type": "strength",
+      "implemented": "no",
+      "pre_survey": {},
+      "post_survey": {
+        "implemented": "no",
+        "reason": "no_motivation"
+      }
+    }
+  ]
+}

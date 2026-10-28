@@ -1,0 +1,64 @@
+{
+  "messages": [
+    {
+      "user_id": "mtdu001@gmail.com",
+      "timestamp": "2026-06-24T09:35:25.559651",
+      "exercise_type": "stretch",
+      "implemented": "yes",
+      "pre_survey": {
+        "visibility": "no"
+      },
+      "post_survey": {
+        "implemented": "yes",
+        "intensity": 5,
+        "reason": "no_time",
+        "other_reason": "すでに実施したため"
+      }
+    },
+    {
+      "user_id": "mtdu001@gmail.com",
+      "timestamp": "2026-06-24T11:20:33.550749",
+      "exercise_type": "stretch",
+      "implemented": "no",
+      "pre_survey": {
+        "visibility": "no"
+      },
+      "post_survey": {
+        "implemented": "no",
+        "intensity": 5,
+        "reason": "other",
+        "other_reason": "すでに実施したため"
+      }
+    },
+    {
+      "user_id": "mtdu001@gmail.com",
+      "timestamp": "2026-06-24T13:32:15.744230",
+      "exercise_type": "stretch",
+      "implemented": "yes",
+      "pre_survey": {
+        "visibility": "yes"
+      },
+      "post_survey": {
+        "implemented": "yes",
+        "intensity": 5,
+        "reason": "other",
+        "other_reason": "すでに実施したため"
+      }
+    },
+    {
+      "user_id": "mtdu001@gmail.com",
+      "timestamp": "2026-06-24T18:30:04.284376",
+      "exercise_type": "stretch",
+      "implemented": "no",
+      "pre_survey": {
+        "visibility": "no"
+      },
+      "post_survey": {
+        "implemented": "no",
+        "intensity": 6,
+        "reason": "no_time",
+        "other_reason": "すでに実施したため"
+      }
+    }
+  ]
+}

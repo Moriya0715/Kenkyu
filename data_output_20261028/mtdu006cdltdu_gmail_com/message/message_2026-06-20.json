@@ -1,0 +1,39 @@
+{
+  "messages": [
+    {
+      "user_id": "mtdu006cdltdu@gmail.com",
+      "timestamp": "2026-06-20T10:28:11.309520",
+      "exercise_type": "cardio",
+      "implemented": "no",
+      "pre_survey": {
+        "visibility": "no"
+      },
+      "post_survey": {
+        "implemented": "no",
+        "reason": "no_motivation"
+      }
+    },
+    {
+      "user_id": "mtdu006cdltdu@gmail.com",
+      "timestamp": "2026-06-20T18:43:54.510342",
+      "exercise_type": "strength",
+      "implemented": "yes",
+      "pre_survey": {},
+      "post_survey": {
+        "implemented": "yes",
+        "intensity": 8
+      }
+    },
+    {
+      "user_id": "mtdu006cdltdu@gmail.com",
+      "timestamp": "2026-06-20T18:44:07.970598",
+      "exercise_type": "strength",
+      "implemented": "yes",
+      "pre_survey": {},
+      "post_survey": {
+        "implemented": "yes",
+        "intensity": 5
+      }
+    }
+  ]
+}
