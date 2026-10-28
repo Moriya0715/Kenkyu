@@ -366,7 +366,7 @@ def evaluate_parsed_and_enqueue(user_id: str, parsed: list, now: datetime, curr_
                         'type': ev.get('type'),
                         'ts': ev.get('ts'),
                     },
-                    limit=5,
+                    limit=10,
                 )
             except Exception:
                 logging.exception('Failed to build exercise AI input for user=%s', user_id)
