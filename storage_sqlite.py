@@ -18,6 +18,7 @@ import time
 import json
 from datetime import date, datetime, timedelta
 from typing import Optional, List, Tuple, Dict, Any
+from japan_time import as_jst, now_jst
 
 # optional dependency for file locking
 try:
@@ -74,6 +75,16 @@ def _sanitize_user_id(user_id: str) -> str:
     import re
     s = re.sub(r'[^0-9A-Za-z]+', '_', user_id)
     return s
+
+
+def get_dates_from_week_start(now: Optional[datetime] = None) -> List[date]:
+    """Return dates from this week's configured JST start through today."""
+    now = as_jst(now) if now is not None else now_jst()
+    if not 0 <= WEEK_START_WEEKDAY <= 6:
+        raise ValueError(f'WEEK_START_WEEKDAY must be between 0 and 6; got {WEEK_START_WEEKDAY}')
+    week_start = now.date() - timedelta(days=(now.weekday() - WEEK_START_WEEKDAY) % 7)
+    return [week_start + timedelta(days=offset) for offset in range((now.date() - week_start).days + 1)]
+
 
 def ensure_schema(db_path: str = DB_PATH):
     """Create tables if they do not exist."""
@@ -331,7 +342,7 @@ def allow_enqueue_for_user(user_id: str, window_seconds: int = 2 * 60 * 60, db_p
 
 
 def _day_file_path(user_id: str, dt: datetime) -> str:
-    tag = dt.strftime('%Y-%m-%d')
+    tag = as_jst(dt).strftime('%Y-%m-%d')
     safe_user = _sanitize_user_id(user_id)
     # New layout: data_output/<sanitized_user>/value/heart_YYYY-MM-DD.json
     user_base = os.path.join('data_output', safe_user)
@@ -1020,19 +1031,16 @@ def get_latest_sent_notification(user_id: str, within_minutes: int = 15, db_path
             return None
         nid, sent_at = row[0], row[1]
         try:
-            from datetime import datetime, timezone
+            from datetime import datetime
             if isinstance(sent_at, datetime):
                 dt = sent_at
             else:
                 dt = datetime.fromisoformat(str(sent_at))
             # ensure timezone-aware
             if dt.tzinfo is None:
-                try:
-                    dt = dt.replace(tzinfo=datetime.now().astimezone().tzinfo)
-                except Exception:
-                    pass
+                dt = as_jst(dt)
             from datetime import timedelta
-            if datetime.now(dt.tzinfo) - dt <= timedelta(minutes=within_minutes):
+            if now_jst().astimezone(dt.tzinfo) - dt <= timedelta(minutes=within_minutes):
                 return nid
         except Exception:
             return nid
@@ -1088,9 +1096,7 @@ def get_weekly_implemented_exercise_counts(
     The reporting week is determined from sent_exercise_notifications.sent_at,
     so an exercise belongs to the week when it was presented to the user.
     """
-    now = now or datetime.now().astimezone()
-    if now.tzinfo is None:
-        now = now.replace(tzinfo=datetime.now().astimezone().tzinfo)
+    now = as_jst(now) if now is not None else now_jst()
     days_since_week_start = (now.weekday() - WEEK_START_WEEKDAY) % 7
     period_start = (now - timedelta(days=days_since_week_start)).replace(
         hour=0, minute=0, second=0, microsecond=0
@@ -1246,7 +1252,7 @@ def get_recent_samples(user_id: str, minutes: int, db_path: str = DB_PATH) -> Li
     from datetime import datetime, timedelta
     import json
 
-    now = datetime.now().astimezone()
+    now = now_jst()
     cutoff = now - timedelta(minutes=minutes)
     results = []
 
@@ -1265,6 +1271,8 @@ def get_recent_samples(user_id: str, minutes: int, db_path: str = DB_PATH) -> Li
             with open(path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
         except Exception:
+            continue
+        if data.get('time_zone') != 'Asia/Tokyo':
             continue
         permin = data.get('PerMinute') or []
         for e in permin:
@@ -1333,7 +1341,7 @@ def enqueue_notification(user_id: str, channel: str, text: str, payload: str = N
             # If dedupe query fails, proceed with normal insert path.
             pass
 
-        now = datetime.now().astimezone().isoformat()
+        now = now_jst().isoformat()
         cur = conn.cursor()
         # include notification_key and (optionally) notification_id when schema supports it
         if notification_id:
@@ -1423,7 +1431,7 @@ def enqueue_notification_for_user(user_id: str, text: str, notification_id: str 
             logging.warning('No channel mapping for user %s; inserting failed notification (last_exc=%s)', user_id, repr(last_exc))
             conn = _get_conn(db_path)
             try:
-                now = datetime.now().astimezone().isoformat()
+                now = now_jst().isoformat()
                 reason = f'lookup_exception: {str(last_exc)}' if last_exc is not None else None
                 cur = conn.cursor()
                 if reason:
@@ -1499,7 +1507,7 @@ def enqueue_notification_for_user(user_id: str, text: str, notification_id: str 
                 conn2 = _get_conn(db_path)
                 try:
                     cur2 = conn2.cursor()
-                    now = datetime.now().astimezone().isoformat()
+                    now = now_jst().isoformat()
                     cur2.execute('UPDATE notifications SET status=%s, last_attempt=%s WHERE id=%s', ('reserved', now, nid))
                     try:
                         conn2.commit()
@@ -1518,7 +1526,7 @@ def enqueue_notification_for_user(user_id: str, text: str, notification_id: str 
             # On unexpected enqueue failure, persist a failed row for visibility
             conn = _get_conn(db_path)
             try:
-                now = datetime.now().astimezone().isoformat()
+                now = now_jst().isoformat()
                 cur = conn.cursor()
                 if _is_pg_conn(conn):
                     cur.execute(
@@ -1550,7 +1558,7 @@ def enqueue_notification_for_user(user_id: str, text: str, notification_id: str 
         # As a last resort, attempt to insert a failure record so the event is not lost
         try:
             conn = _get_conn(db_path)
-            now = datetime.now().astimezone().isoformat()
+            now = now_jst().isoformat()
             cur = conn.cursor()
             if _is_pg_conn(conn):
                 cur.execute(
@@ -1621,7 +1629,7 @@ def mark_notification_sent(row_id: int, message_ts: str = None, notification_id:
     # Use _get_conn to ensure PRAGMAs are applied and retry on busy/locked
     conn = _get_conn(db_path)
     try:
-        now = datetime.now().astimezone().isoformat()
+        now = now_jst().isoformat()
         # If notification_id not provided, attempt best-effort resolution by matching
         # a sent_exercise_notifications row for the same user with similar text/time.
         resolved_nid = notification_id
@@ -1716,7 +1724,7 @@ def mark_notification_failed(row_id: int, reason: str = None, db_path: str = DB_
     conn = _get_conn(db_path)
     try:
         cur = conn.cursor()
-        now = datetime.now().astimezone().isoformat()
+        now = now_jst().isoformat()
         # append reason to text for visibility if provided
         if reason:
             try:
@@ -1757,7 +1765,7 @@ def get_last_sent_time(user_id: str, db_path: str = DB_PATH) -> Optional[datetim
         # Ensure timezone-aware for comparisons
         if dt.tzinfo is None:
             try:
-                dt = dt.replace(tzinfo=datetime.now().astimezone().tzinfo)
+                dt = as_jst(dt)
             except Exception:
                 pass
         return dt
@@ -1787,7 +1795,7 @@ def get_global_last_sent_time(db_path: str = DB_PATH) -> Optional[datetime]:
                 return None
         if dt.tzinfo is None:
             try:
-                dt = dt.replace(tzinfo=datetime.now().astimezone().tzinfo)
+                dt = as_jst(dt)
             except Exception:
                 pass
         return dt
@@ -1804,8 +1812,8 @@ def _parse_iso_dt(dt_val: Any) -> Optional[datetime]:
         return None
     if isinstance(dt_val, datetime):
         if dt_val.tzinfo is None:
-            return dt_val.replace(tzinfo=datetime.now().astimezone().tzinfo)
-        return dt_val
+            return as_jst(dt_val)
+        return as_jst(dt_val)
     s = str(dt_val).strip()
     try:
         dt = datetime.fromisoformat(s)
@@ -1818,8 +1826,8 @@ def _parse_iso_dt(dt_val: Any) -> Optional[datetime]:
             except Exception:
                 return None
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=datetime.now().astimezone().tzinfo)
-    return dt
+        dt = as_jst(dt)
+    return as_jst(dt)
 
 
 def ensure_sleeptime_schema(db_path: str = DB_PATH) -> None:
@@ -1998,7 +2006,7 @@ def get_sleep_times_for_window_db(
 
 def get_previous_sleep_start_db(user_id: str, days_back: int = 1, db_path: str = DB_PATH) -> Optional[datetime]:
     """Get the sleep start time from sleeptime table for days_back days ago."""
-    target_date = datetime.now().date() - timedelta(days=days_back)
+    target_date = now_jst().date() - timedelta(days=days_back)
     conn = _get_conn(db_path)
     try:
         cur = conn.cursor()
@@ -2060,7 +2068,7 @@ def get_recent_sleep_starts_db(user_id: str, max_items: int = 3, db_path: str = 
 
 def get_previous_sleep_end_db(user_id: str, days_back: int = 1, db_path: str = DB_PATH) -> Optional[datetime]:
     """Get the sleep end time from sleeptime table for days_back days ago."""
-    target_date = datetime.now().date() - timedelta(days=days_back)
+    target_date = now_jst().date() - timedelta(days=days_back)
     conn = _get_conn(db_path)
     try:
         cur = conn.cursor()

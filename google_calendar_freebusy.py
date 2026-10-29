@@ -19,7 +19,7 @@ google_calendar_freebusy.py
 
 設計上の決定:
 - 対象カレンダー: 
-- 期間: 当日 00:00:00 から本日 23:59:59 まで
+- 期間: 日本時間の当日 00:00:00 から 23:59:59 まで
     - 営業時間制限は廃止（全日を対象）
   - 最短空き枠: 30 分
 """
@@ -33,6 +33,7 @@ import sys
 import json
 from db import connect as db_connect, DB_URL
 import argparse
+from japan_time import JST, as_jst, now_jst
 
 try:
     from google.oauth2.credentials import Credentials
@@ -267,12 +268,9 @@ def subtract_busy_from_range(free_range, busy_ranges):
 
 
 def format_iso(dt):
-    # Ensure output includes local timezone offset (RFC3339)
     if dt.tzinfo is None:
-        # attach local timezone
-        local_tz = datetime.now().astimezone().tzinfo
-        dt = dt.replace(tzinfo=local_tz)
-    return dt.isoformat()
+        dt = dt.replace(tzinfo=JST)
+    return as_jst(dt).isoformat()
 
 
 def main(account_id: str = None, target_date=None):
@@ -285,7 +283,7 @@ def main(account_id: str = None, target_date=None):
     service = build('calendar', 'v3', credentials=creds)
 
     # use timezone-aware 'now' so comparisons with API datetimes (which include offsets) work
-    now = datetime.now().astimezone()
+    now = now_jst()
     today = target_date or now.date()
     # period: today 00:00:00 .. today 23:59:59
     time_min = datetime.combine(today, time(0, 0, 0)).replace(tzinfo=now.tzinfo)
@@ -332,11 +330,11 @@ def main(account_id: str = None, target_date=None):
             end_iso = format_iso(e)
             # local readable
             try:
-                start_local = s.astimezone().strftime('%Y-%m-%d %H:%M %z') if getattr(s, 'tzinfo', None) else s.strftime('%Y-%m-%d %H:%M')
+                start_local = as_jst(s).strftime('%Y-%m-%d %H:%M %z') if getattr(s, 'tzinfo', None) else s.strftime('%Y-%m-%d %H:%M')
             except Exception:
                 start_local = s.strftime('%Y-%m-%d %H:%M')
             try:
-                end_local = e.astimezone().strftime('%Y-%m-%d %H:%M %z') if getattr(e, 'tzinfo', None) else e.strftime('%Y-%m-%d %H:%M')
+                end_local = as_jst(e).strftime('%Y-%m-%d %H:%M %z') if getattr(e, 'tzinfo', None) else e.strftime('%Y-%m-%d %H:%M')
             except Exception:
                 end_local = e.strftime('%Y-%m-%d %H:%M')
             start_time = s.strftime('%H:%M')

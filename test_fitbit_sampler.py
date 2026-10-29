@@ -6,6 +6,8 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, patch
 
 import fitbit_sampler
+from japan_time import JST
+import storage_sqlite
 
 
 class RestingHeartRateTests(unittest.TestCase):
@@ -65,6 +67,28 @@ class RestingHeartRateTests(unittest.TestCase):
         self.assertEqual((first, second), (57, 57))
         fetch.assert_called_once()
 
+    def test_fetch_day_uses_japan_midnight_boundaries(self):
+        fixed_now = datetime(2026, 10, 29, 18, 30, tzinfo=JST)
+        with patch.object(fitbit_sampler, "_get_access_token", return_value="access-token"), \
+                patch.object(fitbit_sampler, "_fetch_minutes", return_value=[]) as fetch_minutes, \
+                patch.object(fitbit_sampler, "now_jst", return_value=fixed_now):
+            per_minute = fitbit_sampler.fetch_day("user@example.com", "2026-10-28")
+
+        start, end = fetch_minutes.call_args.args[1:]
+        self.assertEqual(start.isoformat(), "2026-10-28T00:00:00+09:00")
+        self.assertEqual(end.isoformat(), "2026-10-29T00:00:00+09:00")
+        self.assertEqual(fitbit_sampler._utc_iso(start), "2026-10-27T15:00:00Z")
+        self.assertEqual(fitbit_sampler._utc_iso(end), "2026-10-28T15:00:00Z")
+        self.assertEqual(len(per_minute), 1439)
+        self.assertEqual(per_minute[0]["time"], "00:01:00")
+        self.assertEqual(per_minute[-1]["time"], "23:59:00")
+
+    def test_naive_api_boundaries_are_interpreted_as_japan_time(self):
+        self.assertEqual(
+            fitbit_sampler._utc_iso(datetime(2026, 10, 28)),
+            "2026-10-27T15:00:00Z",
+        )
+
     def test_save_day_json_preserves_existing_rate_when_new_value_missing(self):
         with tempfile.TemporaryDirectory() as directory:
             output_path = os.path.join(directory, "heart_2026-10-07.json")
@@ -86,6 +110,51 @@ class RestingHeartRateTests(unittest.TestCase):
                     saved = json.load(output_file)
 
         self.assertEqual(saved["calculated_value"]["resting_heart_rate"], 57)
+
+    def test_save_day_json_does_not_merge_unzoned_legacy_samples(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output_path = os.path.join(directory, "heart_2026-10-07.json")
+            with open(output_path, "w", encoding="utf-8") as output_file:
+                json.dump(
+                    {
+                        "PerMinute": [{"time": "09:01:00", "heart_rate": 60}],
+                        "calculated_value": {},
+                    },
+                    output_file,
+                )
+
+            with patch("storage_sqlite._day_file_path", return_value=output_path):
+                fitbit_sampler.save_day_json(
+                    "save-test-user",
+                    "2026-10-07",
+                    [{"time": "00:01:00", "heart_rate": 55}],
+                )
+            with open(output_path, "r", encoding="utf-8") as output_file:
+                saved = json.load(output_file)
+            with open(output_path + ".legacy", "r", encoding="utf-8") as legacy_file:
+                legacy = json.load(legacy_file)
+
+        self.assertEqual(saved["time_zone"], "Asia/Tokyo")
+        self.assertEqual(legacy["PerMinute"][0]["time"], "09:01:00")
+        self.assertEqual(
+            saved["PerMinute"],
+            [{"time": "00:01:00", "heart_rate": 55, "steps": 0, "calories": None}],
+        )
+
+    def test_recent_samples_ignore_legacy_files_without_timezone_metadata(self):
+        fixed_now = datetime(2026, 10, 28, 12, 0, tzinfo=JST)
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "heart_2026-10-28.json")
+            with open(path, "w", encoding="utf-8") as output_file:
+                json.dump(
+                    {"PerMinute": [{"time": "11:30:00", "heart_rate": 60, "steps": 0}]},
+                    output_file,
+                )
+            with patch.object(storage_sqlite, "_day_file_path", return_value=path), \
+                    patch.object(storage_sqlite, "now_jst", return_value=fixed_now):
+                samples = storage_sqlite.get_recent_samples("legacy-user", minutes=60)
+
+        self.assertEqual(samples, [])
 
 
 if __name__ == "__main__":

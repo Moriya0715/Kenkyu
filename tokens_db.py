@@ -12,7 +12,7 @@ DB接続は db.py の connect() に統一し、生SQLで操作します。
 """
 
 from typing import Optional, List, Dict
-from datetime import datetime
+from japan_time import now_jst
 
 from db import connect as db_connect
 
@@ -36,7 +36,7 @@ def ensure_schema() -> None:
 def set_channel_for_user(user_id: str, channel_id: str, note: Optional[str] = None) -> None:
     """Insert or update mapping for user_id -> channel_id using upsert."""
     ensure_schema()
-    now = datetime.now().isoformat()
+    now = now_jst().isoformat()
     con = db_connect()
     con.execute(
         """

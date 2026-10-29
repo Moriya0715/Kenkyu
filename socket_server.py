@@ -17,6 +17,7 @@ import signal
 import subprocess
 
 from slack_bolt.adapter.socket_mode import SocketModeHandler
+from japan_time import jst_log_time
 
 repo_root = os.path.dirname(os.path.abspath(__file__))
 LOCK_NAME = 'socket_server'
@@ -90,11 +91,14 @@ def setup_logging():
     os.makedirs(LOGS_DIR, exist_ok=True)
     logpath = os.path.join(LOGS_DIR, 'socket_server.log')
     level = logging.DEBUG if os.environ.get('DEBUG_SLACK') else logging.INFO
+    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+    formatter.converter = jst_log_time
     logging.basicConfig(
         level=level,
-        format='%(asctime)s %(levelname)s %(message)s',
         handlers=[logging.FileHandler(logpath, encoding='utf-8'), logging.StreamHandler()],
     )
+    for handler in logging.getLogger().handlers:
+        handler.setFormatter(formatter)
 
 
 def _ensure_release_on_exit(release_fn):

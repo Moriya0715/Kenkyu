@@ -2,6 +2,7 @@
 Google Health API sampler with the existing one-minute JSON output contract.
 sample_once() returns a single latest sample, fetch_day() returns a full-day per-minute record.
 The output format is compatible with the existing PerMinute JSON schema used for Fitbit data.
+Daily JSON time values use Japan Standard Time and include a time_zone marker.
 """
 
 from __future__ import annotations
@@ -10,12 +11,14 @@ from datetime import datetime, timedelta, timezone
 import json
 import logging
 import os
+import shutil
 import time
 from typing import Any, Iterable, Optional
 
 import requests
 
 import get_fitbit_token
+from japan_time import JST, as_jst, now_jst
 
 
 HEALTH_API_ROOT = "https://health.googleapis.com/v4/users/me/dataTypes"
@@ -31,9 +34,7 @@ def _get_access_token(user_id: str) -> str:
 
 
 def _utc_iso(value: datetime) -> str:
-    if value.tzinfo is None:
-        value = value.astimezone()
-    return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+    return as_jst(value).astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def _parse_time(value: Any) -> Optional[datetime]:
@@ -210,7 +211,7 @@ def _points_by_minute(
 
 
 def _fetch_minutes(access_token: str, start: datetime, end: datetime) -> list[dict]:
-    local_tz = start.tzinfo or datetime.now().astimezone().tzinfo
+    local_tz = JST
     heart_rates = _points_by_minute(
         _list_data_points(access_token, "heart-rate", start, end),
         "heartRate",
@@ -312,7 +313,7 @@ def fetch_sleep_sessions(user_id: str, start: datetime, end: datetime) -> list[d
 def sample_once(user_id: str):
     """Fetch the latest available one-minute Google Health sample."""
     access_token = _get_access_token(user_id)
-    end = datetime.now().astimezone().replace(second=0, microsecond=0)
+    end = now_jst().replace(second=0, microsecond=0)
     samples = _fetch_minutes(access_token, end - timedelta(minutes=1), end)
     sample = samples[-1] if samples else {
         "time": end.strftime("%H:%M:00"),
@@ -364,11 +365,10 @@ def _get_daily_resting_heart_rate(
 
 
 def fetch_day(user_id: str, date: str, include_summary: bool = False):
-    """Fetch one calendar day as existing PerMinute-compatible records."""
-    local_tz = datetime.now().astimezone().tzinfo
-    start = datetime.fromisoformat(date).replace(tzinfo=local_tz)
+    """Fetch one Japan-time calendar day as PerMinute-compatible records."""
+    start = datetime.fromisoformat(date).replace(tzinfo=JST)
     full_day_end = start + timedelta(days=1) - timedelta(minutes=1)
-    now = datetime.now(local_tz).replace(second=0, microsecond=0)
+    now = now_jst().replace(second=0, microsecond=0)
     end = min(full_day_end, now) if start.date() == now.date() else full_day_end
     access_token = _get_access_token(user_id)
     raw_samples = _fetch_minutes(access_token, start, end + timedelta(minutes=1))
@@ -385,11 +385,13 @@ def fetch_day(user_id: str, date: str, include_summary: bool = False):
 
 
 def save_day_json(user_id: str, date: str, per_minute: list, out_dir: str = "./data_output/value", resting_heart_rate=None):
-    """Save full-day per-minute data using the existing JSON schema and merge policy."""
+    """Save a JST-tagged daily file, keeping legacy data backed up and separate."""
     try:
         import storage_sqlite
 
-        day_filepath = storage_sqlite._day_file_path(user_id, datetime.fromisoformat(date + "T00:00:00"))
+        day_filepath = storage_sqlite._day_file_path(
+            user_id, datetime.fromisoformat(date + "T00:00:00").replace(tzinfo=JST)
+        )
         os.makedirs(os.path.dirname(day_filepath), exist_ok=True)
     except Exception:
         os.makedirs(out_dir, exist_ok=True)
@@ -414,7 +416,12 @@ def save_day_json(user_id: str, date: str, per_minute: list, out_dir: str = "./d
             return value
 
     by_time = {}
-    for item in existing.get("PerMinute", []) if isinstance(existing, dict) else []:
+    existing_is_jst = existing.get("time_zone") == "Asia/Tokyo"
+    if os.path.exists(day_filepath) and not existing_is_jst:
+        legacy_backup = day_filepath + ".legacy"
+        if not os.path.exists(legacy_backup):
+            shutil.copy2(day_filepath, legacy_backup)
+    for item in existing.get("PerMinute", []) if isinstance(existing, dict) and existing_is_jst else []:
         if isinstance(item, dict) and (time_key := normalize_time(item.get("time"))):
             by_time[time_key] = {**item, "time": time_key}
     for item in per_minute:
@@ -441,6 +448,7 @@ def save_day_json(user_id: str, date: str, per_minute: list, out_dir: str = "./d
     if resting_heart_rate is None:
         resting_heart_rate = existing_calculated.get("resting_heart_rate")
     output = {
+        "time_zone": "Asia/Tokyo",
         "PerMinute": merged,
         "calculated_value": {
             "heart_rate_max": max(heart_rates) if heart_rates else None,

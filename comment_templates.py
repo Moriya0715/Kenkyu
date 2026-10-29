@@ -2,6 +2,7 @@ import os
 import json
 import random
 from datetime import datetime
+from japan_time import now_jst
 
 try:
     import yaml
@@ -168,7 +169,7 @@ def get_comment(event_type: str, context: dict = None, path: str = None, time_of
     if 'time' in ctx and isinstance(ctx['time'], datetime):
         t = ctx['time']
     else:
-        t = datetime.now()
+        t = now_jst()
     # allow caller to override time-of-day bucket (eg. force 'evening')
     if time_of_day_override:
         tod = time_of_day_override

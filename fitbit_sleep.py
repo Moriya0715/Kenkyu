@@ -17,6 +17,7 @@ import os
 import json
 import storage_sqlite
 import fitbit_sampler
+from japan_time import JST, as_jst, now_jst
 
 _CACHE = {}  # user_id -> (fetched_at_ts, sessions_list)
 _DEFAULT_TTL = 300
@@ -26,22 +27,20 @@ def _parse_iso(dt_str: str) -> Optional[datetime]:
     if not dt_str:
         return None
     try:
-        # Python 3.7+: fromisoformat handles timezone offsets
-        return datetime.fromisoformat(dt_str)
+        parsed = datetime.fromisoformat(dt_str)
     except Exception:
         try:
-            # fallback: try rfc parsing without timezone
-            return datetime.strptime(dt_str, '%Y-%m-%dT%H:%M:%S.%f')
+            parsed = datetime.strptime(dt_str, '%Y-%m-%dT%H:%M:%S.%f')
         except Exception:
             try:
-                return datetime.strptime(dt_str, '%Y-%m-%dT%H:%M:%S')
+                parsed = datetime.strptime(dt_str, '%Y-%m-%dT%H:%M:%S')
             except Exception:
                 return None
+    return as_jst(parsed)
 
 
 def _fetch_sleep_for_date(user_id: str, date_str: str) -> list[dict]:
-    local_tz = datetime.now().astimezone().tzinfo
-    start = datetime.fromisoformat(date_str).replace(tzinfo=local_tz)
+    start = datetime.fromisoformat(date_str).replace(tzinfo=JST)
     return fitbit_sampler.fetch_sleep_sessions(user_id, start, start + timedelta(days=1))
 
 
@@ -61,6 +60,7 @@ def is_user_sleeping(user_id: str, now: datetime, ttl_seconds: int = _DEFAULT_TT
 
     On API or token error, returns False (do not suppress notifications).
     """
+    now = as_jst(now)
     now_ts = time.time()
     try:
         # Use cache if available
@@ -96,7 +96,7 @@ def is_user_sleeping(user_id: str, now: datetime, ttl_seconds: int = _DEFAULT_TT
             if start_dt <= now and (end_dt is None or now < end_dt):
                 # Persist sessions around the found one for history
                 try:
-                    _save_sessions_to_disk(user_id, sessions, datetime.now().astimezone())
+                    _save_sessions_to_disk(user_id, sessions, now_jst())
                 except Exception:
                     logging.exception('Failed to save sleep sessions for %s', user_id)
                 return True
@@ -252,6 +252,26 @@ def _saved_file_has_sessions(path: str) -> bool:
         return True
 
 
+def refresh_sleep_history_window(
+    user_id: str,
+    start_date: date,
+    end_date: date,
+    now: Optional[datetime] = None,
+) -> int:
+    """Fetch and save sleep sessions ending within the inclusive JST date range."""
+    now = as_jst(now) if now is not None else now_jst()
+    sessions = _fetch_sleep_for_window(user_id, start_date, end_date, JST)
+    sessions_by_date = _group_sessions_by_end_date(sessions, start_date, end_date, JST)
+    saved_count = 0
+    for date_str, daily_sessions in sessions_by_date.items():
+        path = _sleep_file_path(user_id, date.fromisoformat(date_str))
+        if not daily_sessions and _saved_file_has_sessions(path):
+            continue
+        _save_sessions_to_disk(user_id, daily_sessions, now, date_tag=date_str)
+        saved_count += len(daily_sessions)
+    return saved_count
+
+
 def refresh_recent_sleep_history_if_due(
     user_id: str,
     now: datetime,
@@ -259,13 +279,14 @@ def refresh_recent_sleep_history_if_due(
     refresh_hour: int = 12,
 ) -> bool:
     """Refresh the rolling sleep history once daily at or after the scheduled hour."""
+    now = as_jst(now)
     if now.hour < refresh_hour or _was_refresh_attempted_today(user_id, now):
         return False
 
     _mark_refresh_attempt_today(user_id, now)
     end_date = now.date()
     start_date = end_date - timedelta(days=max_days - 1)
-    tz = now.tzinfo or timezone.utc
+    tz = now.tzinfo or JST
 
     try:
         sessions = _fetch_sleep_for_window(user_id, start_date, end_date, tz)
@@ -296,7 +317,9 @@ def refresh_recent_sleep_history_if_due(
 def save_sessions(user_id: str, sessions: List[dict], fetched_at: Optional[datetime] = None):
     """Public helper to persist sessions. If fetched_at omitted, uses now()."""
     if fetched_at is None:
-        fetched_at = datetime.now().astimezone()
+        fetched_at = now_jst()
+    else:
+        fetched_at = as_jst(fetched_at)
     return _save_sessions_to_disk(user_id, sessions, fetched_at)
 
 
@@ -314,7 +337,7 @@ def get_previous_sleep_start(user_id: str, days_back: int = 1) -> Optional[datet
 
     try:
         safe = storage_sqlite._sanitize_user_id(user_id)
-        target_date = (datetime.now().date() - timedelta(days=days_back)).strftime('%Y-%m-%d')
+        target_date = (now_jst().date() - timedelta(days=days_back)).strftime('%Y-%m-%d')
         sleep_dir = os.path.join('data_output', safe, 'sleep')
         fname = os.path.join(sleep_dir, f'sleep_{target_date}.json')
         if not os.path.exists(fname):
@@ -397,10 +420,10 @@ def get_average_of_starts(starts: List[datetime]) -> Optional[datetime]:
         for d in starts:
             if d.tzinfo is None:
                 # assume local tz
-                d = d.replace(tzinfo=datetime.now().astimezone().tzinfo)
+                d = as_jst(d)
             ts.append(d.timestamp())
         avg = sum(ts) / len(ts)
-        return datetime.fromtimestamp(avg, tz=datetime.now().astimezone().tzinfo)
+        return datetime.fromtimestamp(avg, tz=JST)
     except Exception:
         logging.exception('get_average_of_starts failed')
         return None
@@ -430,7 +453,7 @@ def get_effective_sleep_start(user_id: str, max_recent: int = 3, fallback_hour: 
         except Exception:
             logging.exception('night null detection failed for %s', user_id)
         # 3) fallback to today's fallback_hour
-        now = datetime.now().astimezone()
+        now = now_jst()
         today = now.date()
         fallback_dt = datetime(year=today.year, month=today.month, day=today.day, hour=fallback_hour, minute=0, second=0, tzinfo=now.tzinfo)
         return fallback_dt, 'fallback'
@@ -446,7 +469,7 @@ def _find_night_null_start(user_id: str, night_start_hour: int = 20, night_end_h
     """
     try:
         safe = storage_sqlite._sanitize_user_id(user_id)
-        now = datetime.now().astimezone()
+        now = now_jst()
         dates = [now.date() - timedelta(days=1), now.date() - timedelta(days=2)]
         tz = now.tzinfo
         candidates = []
@@ -457,6 +480,8 @@ def _find_night_null_start(user_id: str, night_start_hour: int = 20, night_end_h
             try:
                 with open(path, 'r', encoding='utf-8') as f:
                     obj = json.load(f)
+                if obj.get('time_zone') != 'Asia/Tokyo':
+                    continue
                 permin = obj.get('PerMinute') or []
                 # iterate and find null blocks
                 in_null = False
@@ -529,7 +554,7 @@ def get_previous_sleep_end(user_id: str, days_back: int = 1) -> Optional[datetim
 
     try:
         safe = storage_sqlite._sanitize_user_id(user_id)
-        target_date = (datetime.now().date() - timedelta(days=days_back)).strftime('%Y-%m-%d')
+        target_date = (now_jst().date() - timedelta(days=days_back)).strftime('%Y-%m-%d')
         sleep_dir = os.path.join('data_output', safe, 'sleep')
         fname = os.path.join(sleep_dir, f'sleep_{target_date}.json')
         if not os.path.exists(fname):
@@ -602,10 +627,10 @@ def get_average_of_ends(ends: List[datetime]) -> Optional[datetime]:
         ts = []
         for d in ends:
             if d.tzinfo is None:
-                d = d.replace(tzinfo=datetime.now().astimezone().tzinfo)
+                d = as_jst(d)
             ts.append(d.timestamp())
         avg = sum(ts) / len(ts)
-        return datetime.fromtimestamp(avg, tz=datetime.now().astimezone().tzinfo)
+        return datetime.fromtimestamp(avg, tz=JST)
     except Exception:
         logging.exception('get_average_of_ends failed')
         return None
@@ -639,6 +664,7 @@ def _main_sleep_sessions(sessions: List[dict]) -> List[dict]:
 
 
 def _get_sleep_times_for_window(user_id: str, now: datetime, max_days: int):
+    now = as_jst(now)
     # Try DB (sleeptime table) first
     try:
         start_date = now.date() - timedelta(days=max_days - 1)
@@ -701,6 +727,7 @@ def get_median_sleep_suppression_status(
           - 'ends_count': int
     """
     try:
+        now = as_jst(now)
         starts, ends = _get_sleep_times_for_window(user_id, now, max_items)
         if not starts or not ends:
             return False, None
@@ -759,7 +786,7 @@ def get_effective_wake_time(user_id: str, max_recent: int = 3, fallback_hour: in
             avg = get_average_of_ends(recent[:max_recent])
             if avg is not None:
                 return avg, 'average'
-        now = datetime.now().astimezone()
+        now = now_jst()
         today = now.date()
         fallback_dt = datetime(year=today.year, month=today.month, day=today.day, hour=fallback_hour, minute=0, second=0, tzinfo=now.tzinfo)
         return fallback_dt, 'fallback'
@@ -781,7 +808,7 @@ def estimate_wake_time(user_id: str, non_wear_threshold_min: int = 240):
     try:
         # 1) Google Health sleep API: try yesterday then today
         try:
-            for d in [(datetime.now().date() - timedelta(days=1)), datetime.now().date()]:
+            for d in [(now_jst().date() - timedelta(days=1)), now_jst().date()]:
                 try:
                     sleeps = _fetch_sleep_for_date(user_id, d.isoformat())
                 except Exception:
@@ -798,7 +825,8 @@ def estimate_wake_time(user_id: str, non_wear_threshold_min: int = 240):
         # 2) Detect long non-wear block: look at per-minute heart files for yesterday and today
         try:
             safe = storage_sqlite._sanitize_user_id(user_id)
-            dates = [datetime.now().date(), (datetime.now().date() - timedelta(days=1))]
+            today = now_jst().date()
+            dates = [today, today - timedelta(days=1)]
             timestamps = []
             for d in reversed(dates):
                 path = storage_sqlite._day_file_path(user_id, datetime(d.year, d.month, d.day))
@@ -807,6 +835,8 @@ def estimate_wake_time(user_id: str, non_wear_threshold_min: int = 240):
                 try:
                     with open(path, 'r', encoding='utf-8') as f:
                         obj = json.load(f)
+                    if obj.get('time_zone') != 'Asia/Tokyo':
+                        continue
                     permin = obj.get('PerMinute') or []
                     for e in permin:
                         t = e.get('time')
@@ -814,7 +844,7 @@ def estimate_wake_time(user_id: str, non_wear_threshold_min: int = 240):
                             continue
                         try:
                             hh, mm, ss = [int(x) for x in t.split(':')]
-                            ts = datetime(d.year, d.month, d.day, hh, mm, ss, tzinfo=datetime.now().astimezone().tzinfo)
+                            ts = datetime(d.year, d.month, d.day, hh, mm, ss, tzinfo=JST)
                             timestamps.append(ts)
                         except Exception:
                             continue
@@ -843,11 +873,13 @@ def estimate_wake_time(user_id: str, non_wear_threshold_min: int = 240):
 
         # 3) First valid sample of today between 06:00 and 11:00
         try:
-            d = datetime.now().date()
+            d = now_jst().date()
             path = storage_sqlite._day_file_path(user_id, datetime(d.year, d.month, d.day))
             if os.path.exists(path):
                 with open(path, 'r', encoding='utf-8') as f:
                     obj = json.load(f)
+                if obj.get('time_zone') != 'Asia/Tokyo':
+                    return None, 'none'
                 permin = obj.get('PerMinute') or []
                 first_dt = None
                 for e in permin:
@@ -856,7 +888,7 @@ def estimate_wake_time(user_id: str, non_wear_threshold_min: int = 240):
                         continue
                     try:
                         hh, mm, ss = [int(x) for x in t.split(':')]
-                        ts = datetime(d.year, d.month, d.day, hh, mm, ss, tzinfo=datetime.now().astimezone().tzinfo)
+                        ts = datetime(d.year, d.month, d.day, hh, mm, ss, tzinfo=JST)
                         if first_dt is None:
                             first_dt = ts
                     except Exception:

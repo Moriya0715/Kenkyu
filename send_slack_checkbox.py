@@ -46,6 +46,7 @@ except Exception:
     use_openai = None
 
 import slack_notifier
+from japan_time import now_jst
 
 
 EXERCISE_LABELS = {
@@ -78,7 +79,7 @@ def save_survey_result(
     msg_dir = os.path.join('data_output', safe_user, 'message')
     os.makedirs(msg_dir, exist_ok=True)
 
-    now = datetime.now()
+    now = now_jst()
     filepath = os.path.join(msg_dir, f'message_{now.strftime("%Y-%m-%d")}.json')
     payload = {
         'user_id': user_id,

@@ -1,0 +1,2 @@
+start_iso,end_iso,duration_min,start_local,end_local,start_time,end_time,weekday,duration_hm,range
+2026-10-29T00:00:00+00:00,2026-10-29T23:59:59+00:00,1439,2026-10-29 00:00 +0000,2026-10-29 23:59 +0000,00:00,23:59,Thu,23h59m,2026-10-29 00:00 +0000 - 2026-10-29 23:59 +0000 (Thu)

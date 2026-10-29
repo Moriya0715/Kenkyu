@@ -8,7 +8,8 @@ Slack 通知を行わず、データ取得と保存のみを行うプログラ�
   - 睡眠データ                   -> data_output/<user>/sleep/sleep_YYYY-MM-DD.json
   - Google Calendar 予定(free)    -> data_output/<user>/date/freebusy_YYYY-MM-DD.csv
 
-実行日の前日 0:00 から実行時点までを対象に、DB 内の全ユーザー分を1回取得して終了する。
+日本時間の前日と当日を対象に、DB 内の全ユーザー分を1回取得して終了する。
+プロセスの初回実行では、storage_sqlite.WEEK_START_WEEKDAY の週開始日から今日までを取得する。
 常駐してポーリングする（既定 3600 秒間隔）。
   python data_collector.py                 # 環境変数 COLLECT_INTERVAL_SECONDS または 3600 秒
   python data_collector.py --interval 600  # 600 秒間隔
@@ -22,8 +23,10 @@ import signal
 import sys
 import threading
 import time
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 from typing import List
+
+from japan_time import jst_log_time, now_jst
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
@@ -36,6 +39,7 @@ from db import connect as db_connect
 import fitbit_sampler
 import fitbit_sleep
 import google_calendar_freebusy
+import storage_sqlite
 
 VALUE_JSON_DIR = os.path.join('data_output', 'value')
 
@@ -83,24 +87,18 @@ def collect_vitals(user_id: str, day: date):
 
 
 def collect_sleep(user_id: str, now: datetime, start_date: date):
-    tz = now.tzinfo or timezone.utc
     end_date = now.date()
-    sessions = fitbit_sleep._fetch_sleep_for_window(user_id, start_date, end_date, tz)
-    by_date = fitbit_sleep._group_sessions_by_end_date(sessions, start_date, end_date, tz)
-    saved = 0
-    for date_str, daily in by_date.items():
-        path = fitbit_sleep._sleep_file_path(user_id, date.fromisoformat(date_str))
-        # 空の結果で既存の睡眠データを上書きしない
-        if not daily and fitbit_sleep._saved_file_has_sessions(path):
-            continue
-        fitbit_sleep._save_sessions_to_disk(user_id, daily, now, date_tag=date_str)
-        saved += len(daily)
+    saved = fitbit_sleep.refresh_sleep_history_window(user_id, start_date, end_date, now)
     logging.info('Saved sleep: user=%s range=%s..%s sessions=%s', user_id, start_date, end_date, saved)
 
 
-def collect_user(user_id: str, now: datetime):
+def collect_user(user_id: str, now: datetime, initial_fetch: bool = False):
     today = now.date()
-    days = [today - timedelta(days=1), today]
+    days = (
+        storage_sqlite.get_dates_from_week_start(now)
+        if initial_fetch
+        else [today - timedelta(days=1), today]
+    )
     steps = [(f'vitals {d}', lambda d=d: collect_vitals(user_id, d)) for d in days]
     steps.append(('sleep', lambda: collect_sleep(user_id, now, days[0])))
     steps += [(f'calendar {d}', lambda d=d: google_calendar_freebusy.main(account_id=user_id, target_date=d)) for d in days]
@@ -112,14 +110,14 @@ def collect_user(user_id: str, now: datetime):
             logging.exception('Collecting %s failed for user=%s', name, user_id)
 
 
-def run_once() -> bool:
+def run_once(initial_fetch: bool = False) -> bool:
     users = get_users()
     if not users:
         logging.error('No users found in DB.')
         return False
-    now = datetime.now().astimezone()
+    now = now_jst()
     for user in users:
-        collect_user(user, now)
+        collect_user(user, now, initial_fetch=initial_fetch)
     return True
 
 
@@ -136,20 +134,26 @@ def main():
     if args.interval <= 0:
         parser.error('--interval は1以上の秒数を指定してください')
 
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
+    logging.basicConfig(level=logging.INFO)
+    formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s')
+    formatter.converter = jst_log_time
+    for handler in logging.getLogger().handlers:
+        handler.setFormatter(formatter)
 
     if args.once:
-        return 0 if run_once() else 1
+        return 0 if run_once(initial_fetch=True) else 1
 
     stop = threading.Event()
     for sig in (signal.SIGINT, signal.SIGTERM):
         signal.signal(sig, lambda *_: stop.set())
 
     logging.info('Polling started: interval=%ss', args.interval)
+    initial_fetch = True
     while not stop.is_set():
         started = time.monotonic()
         try:
-            run_once()
+            if run_once(initial_fetch=initial_fetch):
+                initial_fetch = False
         except Exception:
             logging.exception('Polling cycle failed')
         wait = max(0.0, args.interval - (time.monotonic() - started))

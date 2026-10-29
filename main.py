@@ -3,6 +3,8 @@ main.py
 
 - 1分ごとに `fitbit_sampler.fetch_day`（full_day_updater）で当日分データを取得・保存
 - 10分ごとに `google_calendar_freebusy.main()` を呼び free/busy CSV を更新
+- 日付の区切りとログ時刻は日本時間（JST）に固定
+- 起動時は `storage_sqlite.WEEK_START_WEEKDAY` の週開始日から今日までのデータを取得
 - free の時間帯にいるとき、以下の条件で Slack 通知:
   * 直近1分の歩数が前回比で +50 以上
   * または、free 時間内で歩数が連続20分間 0 の場合
@@ -81,6 +83,7 @@ def _load_dotenv(path='.env'):
 _load_dotenv()
 
 from db import connect as db_connect
+from japan_time import JST, as_jst, jst_log_time, now_jst
 try:
     import portalocker
 except Exception:
@@ -139,13 +142,17 @@ root_logger.setLevel(logging.INFO)
 
 # ローテーティングファイルハンドラ（1ファイルあたり5MB、バックアップ10個）
 rot_handler = logging.handlers.RotatingFileHandler(LOG_PATH, maxBytes=5 * 1024 * 1024, backupCount=10, encoding='utf-8')
-rot_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s'))
+file_formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s')
+file_formatter.converter = jst_log_time
+rot_handler.setFormatter(file_formatter)
 root_logger.addHandler(rot_handler)
 
 # コンソール出力ハンドラ
 console = logging.StreamHandler()
 console.setLevel(logging.INFO)
-console.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s'))
+console_formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s')
+console_formatter.converter = jst_log_time
+console.setFormatter(console_formatter)
 root_logger.addHandler(console)
 
 
@@ -217,7 +224,7 @@ def read_free_intervals_for_today(user_id: Optional[str] = None) -> List[Tuple[d
     """当日の freebusy CSV を読み、(開始, 終了) のタイムゾーン付き datetime リストを返す。
     ファイルが無ければ空リストを返す。
     """
-    today_tag = datetime.now().strftime('%Y-%m-%d')
+    today_tag = now_jst().strftime('%Y-%m-%d')
     # per-user freebusy CSV: data_output/<sanitized_user>/date/freebusy_YYYY-MM-DD.csv
     if user_id:
         try:
@@ -245,7 +252,7 @@ def read_free_intervals_for_today(user_id: Optional[str] = None) -> List[Tuple[d
                         start_dt = datetime.fromisoformat(s)
                     except Exception:
                         start_dt = datetime.strptime(s, '%Y-%m-%d %H:%M')
-                        start_dt = start_dt.replace(tzinfo=datetime.now().astimezone().tzinfo)
+                        start_dt = start_dt.replace(tzinfo=JST)
                 try:
                     end_dt = datetime.strptime(e, '%Y-%m-%d %H:%M %z')
                 except Exception:
@@ -253,7 +260,9 @@ def read_free_intervals_for_today(user_id: Optional[str] = None) -> List[Tuple[d
                         end_dt = datetime.fromisoformat(e)
                     except Exception:
                         end_dt = datetime.strptime(e, '%Y-%m-%d %H:%M')
-                        end_dt = end_dt.replace(tzinfo=datetime.now().astimezone().tzinfo)
+                        end_dt = end_dt.replace(tzinfo=JST)
+                start_dt = as_jst(start_dt)
+                end_dt = as_jst(end_dt)
                 intervals.append((start_dt, end_dt))
             except Exception:
                 continue
@@ -393,7 +402,7 @@ def evaluate_parsed_and_enqueue(user_id: str, parsed: list, now: datetime, curr_
                     allow = True
                     if last_sent:
                         try:
-                            diff = datetime.now().astimezone() - last_sent
+                            diff = now_jst() - as_jst(last_sent)
                             if diff.total_seconds() < NOTIFY_COOLDOWN_SECONDS:
                                 allow = False
                         except Exception:
@@ -505,14 +514,25 @@ class Sampler:
 def calendar_updater(stop_event: threading.Event, users: List[str]):
     """スレッド: CALENDAR_INTERVAL 秒ごとにカレンダーの free/busy CSV を更新する（ユーザごとに google_calendar_freebusy.main を呼ぶ）。"""
     logging.info('Calendar updater started (interval=%s sec)', CALENDAR_INTERVAL)
+    last_week_start = None
     while not stop_event.is_set():
+        now = now_jst()
+        fetch_dates = storage_sqlite.get_dates_from_week_start(now)
+        week_start = fetch_dates[0]
+        if week_start == last_week_start:
+            fetch_dates = [now.date()]
+        update_succeeded = True
         for user in users:
-            try:
-                logging.info('Calendar update starting for %s', user)
-                google_calendar_freebusy.main(account_id=user)
-                logging.info('Calendar update succeeded for %s', user)
-            except Exception:
-                logging.exception('Calendar update failed for user=%s', user)
+            for target_date in fetch_dates:
+                try:
+                    logging.info('Calendar update starting for %s date=%s', user, target_date)
+                    google_calendar_freebusy.main(account_id=user, target_date=target_date)
+                    logging.info('Calendar update succeeded for %s date=%s', user, target_date)
+                except Exception:
+                    update_succeeded = False
+                    logging.exception('Calendar update failed for user=%s date=%s', user, target_date)
+        if update_succeeded:
+            last_week_start = week_start
         # wait
         stop_event.wait(CALENDAR_INTERVAL)
 
@@ -553,19 +573,77 @@ def get_users_from_db() -> List[str]:
 def full_day_updater(stop_event: threading.Event, user_id: str):
     """スレッド: 定期的に1日の per-minute データを取得し、日次 JSON に保存（マージ）する。"""
     logging.info('Full-day updater started (interval=%s sec)', FULLDAY_INTERVAL)
+    last_week_start = None
+    refreshed_previous_day = None
     while not stop_event.is_set():
         try:
-            today = datetime.now().strftime('%Y-%m-%d')
-            logging.info('Full-day fetch for %s', today)
-            per_minute, summary = fitbit_sampler.fetch_day(user_id, today, include_summary=True)
-            saved = fitbit_sampler.save_day_json(
-                user_id,
-                today,
-                per_minute,
-                out_dir=VALUE_JSON_DIR,
-                resting_heart_rate=(summary or {}).get('resting_heart_rate'),
-            )
-            logging.info('Saved day file: %s', saved)
+            now = now_jst()
+            today_date = now.date()
+            today = today_date.isoformat()
+            previous_day = today_date - timedelta(days=1)
+            fetch_dates = storage_sqlite.get_dates_from_week_start(now)
+            week_start = fetch_dates[0]
+            per_minute = None
+            if week_start != last_week_start:
+                for fetch_date in fetch_dates:
+                    date_tag = fetch_date.isoformat()
+                    logging.info('Initial weekly fetch for %s: %s', user_id, date_tag)
+                    day_samples, day_summary = fitbit_sampler.fetch_day(
+                        user_id, date_tag, include_summary=True
+                    )
+                    day_path = fitbit_sampler.save_day_json(
+                        user_id,
+                        date_tag,
+                        day_samples,
+                        out_dir=VALUE_JSON_DIR,
+                        resting_heart_rate=(day_summary or {}).get('resting_heart_rate'),
+                    )
+                    logging.info('Saved weekly file: %s', day_path)
+                    if fetch_date == today_date:
+                        per_minute = day_samples
+                sleep_count = fitbit_sleep.refresh_sleep_history_window(
+                    user_id, week_start, today_date, now
+                )
+                logging.info(
+                    'Initial weekly sleep fetch completed user=%s range=%s..%s sessions=%s',
+                    user_id,
+                    week_start,
+                    today_date,
+                    sleep_count,
+                )
+                last_week_start = week_start
+                refreshed_previous_day = previous_day if previous_day >= week_start else None
+            elif refreshed_previous_day != previous_day:
+                previous_day_tag = previous_day.isoformat()
+                try:
+                    logging.info('Refreshing previous Japan-time day for %s: %s', user_id, previous_day_tag)
+                    previous_samples, previous_summary = fitbit_sampler.fetch_day(
+                        user_id, previous_day_tag, include_summary=True
+                    )
+                    previous_path = fitbit_sampler.save_day_json(
+                        user_id,
+                        previous_day_tag,
+                        previous_samples,
+                        out_dir=VALUE_JSON_DIR,
+                        resting_heart_rate=(previous_summary or {}).get('resting_heart_rate'),
+                    )
+                    logging.info('Saved previous day file: %s', previous_path)
+                    refreshed_previous_day = previous_day
+                except Exception:
+                    logging.exception('Previous-day update failed for %s', user_id)
+            if per_minute is None:
+                logging.info('Full-day fetch for %s', today)
+                per_minute, summary = fitbit_sampler.fetch_day(
+                    user_id, today, include_summary=True
+                )
+                saved = fitbit_sampler.save_day_json(
+                    user_id,
+                    today,
+                    per_minute,
+                    out_dir=VALUE_JSON_DIR,
+                    resting_heart_rate=(summary or {}).get('resting_heart_rate'),
+                )
+                logging.info('Saved day file: %s', saved)
             # optionally upsert into DB so full-day fetch fills missing values saved as NULL by realtime
             # Disabled by default to avoid unexpected writes; enable by setting env FULLDAY_UPSERT_ENABLED=1
             try:
@@ -600,7 +678,7 @@ def _notifier_loop(stop_event: threading.Event, interval: int = 5):
 def sampler_loop(sampler: Sampler, stop_event: threading.Event, slack_cfg):
     logging.info('Sampler loop started (interval=%s sec)', SAMPLE_INTERVAL)
     while not stop_event.is_set():
-        now = datetime.now().astimezone()
+        now = now_jst()
         try:
             fitbit_sleep.refresh_recent_sleep_history_if_due(sampler.user_id, now)
 

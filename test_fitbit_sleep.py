@@ -6,9 +6,15 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 import fitbit_sleep
+from japan_time import JST
 
 
 class SleepHistoryRefreshTests(unittest.TestCase):
+    def test_api_utc_timestamp_is_normalized_to_japan_time(self):
+        parsed = fitbit_sleep._parse_iso('2026-10-28T15:00:00Z')
+
+        self.assertEqual(parsed, datetime(2026, 10, 29, 0, 0, tzinfo=JST))
+
     def test_refresh_runs_once_after_noon_for_14_dates(self):
         tz = timezone(timedelta(hours=9))
         now = datetime(2026, 10, 7, 11, 59, tzinfo=tz)

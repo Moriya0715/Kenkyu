@@ -23,6 +23,7 @@ Google Health API 用の access_token を取得して返す最小モジュール
 import os
 import time
 import datetime
+from japan_time import JST
 from db import connect as db_connect
 import requests
 from typing import Tuple, Optional
@@ -166,10 +167,10 @@ def get_cached_access_token(user_id: str, safety_margin_sec: int = 120) -> Tuple
     row = con.execute("SELECT access_token, expires_at FROM fitbit_tokens WHERE user_id=?", (user_id,)).fetchone()
     if not row or not row[0]:
         ac, _, exp = get_new_tokens(user_id)
-        exp_dt = datetime.datetime.fromtimestamp(exp)
+        exp_dt = datetime.datetime.fromtimestamp(exp, tz=JST)
         return ac, exp, exp_dt
     ac, exp = row
     if time.time() >= (exp or 0) - safety_margin_sec:
         ac, _, exp = get_new_tokens(user_id)
-    exp_dt = datetime.datetime.fromtimestamp(exp)
+    exp_dt = datetime.datetime.fromtimestamp(exp, tz=JST)
     return ac, exp, exp_dt                           #exp:人にはわからない有効期限,exp_dtにすることで，分かりやすく日付表記にした

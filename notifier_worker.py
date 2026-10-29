@@ -9,12 +9,16 @@ Options:
 import argparse
 import time
 import logging
-from datetime import datetime
 
 import storage_sqlite
 import slack_notifier
+from japan_time import jst_log_time, now_jst
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s: %(message)s')
+logging.basicConfig(level=logging.INFO)
+_log_formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s')
+_log_formatter.converter = jst_log_time
+for _handler in logging.getLogger().handlers:
+    _handler.setFormatter(_log_formatter)
 
 
 # Slack API hard caps (conservative)
@@ -63,7 +67,7 @@ def process_batch(limit: int = 10, do_send: bool = False):
     for r in rows:
         nid, user_id, channel, text, payload = r
         text = _trim(text)
-        last_attempt = datetime.now().astimezone().isoformat()
+        last_attempt = now_jst().isoformat()
         # Defensive: if channel is not set, mark as failed and skip API call
         if not channel:
             logging.warning('Notification %s has no channel; marking failed', nid)
