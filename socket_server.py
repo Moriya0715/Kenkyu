@@ -303,8 +303,8 @@ def main():
     app = send_slack_checkbox.create_app(bot_token, app_token, session)
 
     handler = SocketModeHandler(app, app_token)
-    poll_interval = 5
-    #DBから通知キューを確認して取り出す秒数をpoll_intervalで指定する。デフォルトは5秒。
+    poll_interval = 2
+    # DBから通知キューを確認して取り出す間隔をpoll_intervalで指定する。
     stop_event = threading.Event()
 
     def poller():
