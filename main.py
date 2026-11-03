@@ -113,7 +113,7 @@ FREEBUSY_CSV_DIR = os.path.join('data_output', 'date')
 VALUE_JSON_DIR = os.path.join('data_output', 'value')
 LOG_PATH = os.path.join('logs', 'main.log')
 # notification cooldown in seconds (default 2 hours　2 * 60 * 60)
-NOTIFY_COOLDOWN_SECONDS = 2 * 60 * 60
+NOTIFY_COOLDOWN_SECONDS = 3 * 60 * 60
 
 # Process-level restart flag used for self-healing when critical worker threads stop.
 _RESTART_REQUESTED = False
