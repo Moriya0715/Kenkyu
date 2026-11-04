@@ -8,6 +8,7 @@ Functions:
 This module caches recent API responses per-user for `ttl_seconds` to avoid
 excessive API calls. On error, it returns False (do not suppress notifications).
 """
+import math
 import time
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any, Tuple
@@ -636,18 +637,28 @@ def get_average_of_ends(ends: List[datetime]) -> Optional[datetime]:
         return None
 
 
-def _time_to_night_axis_minutes(dt: datetime) -> int:
-    """Map time-of-day into a night-centric axis where early morning is next day.
-
-    00:00-11:59 are shifted by +24h so midnight-crossing windows become contiguous.
-    """
-    minutes = dt.hour * 60 + dt.minute
-    if minutes < 12 * 60:
-        minutes += 24 * 60
-    return minutes
+def _time_of_day_minutes(dt: datetime) -> int:
+    return dt.hour * 60 + dt.minute
 
 
-def _median(values: List[int]) -> Optional[float]:
+def _circular_mean_minutes(values: List[float]) -> Optional[float]:
+    """Return the mean direction of time-of-day values on a 24-hour circle."""
+    if not values:
+        return None
+    radians = [value * 2 * math.pi / (24 * 60) for value in values]
+    x = sum(math.cos(value) for value in radians)
+    y = sum(math.sin(value) for value in radians)
+    if math.isclose(x, 0.0, abs_tol=1e-12) and math.isclose(y, 0.0, abs_tol=1e-12):
+        return None
+    angle = math.atan2(y, x) % (2 * math.pi)
+    minutes = angle * (24 * 60) / (2 * math.pi)
+    return 0.0 if (
+        math.isclose(minutes, 0.0, abs_tol=1e-9)
+        or math.isclose(minutes, 24 * 60, abs_tol=1e-9)
+    ) else minutes
+
+
+def _median(values: List[float]) -> Optional[float]:
     if not values:
         return None
     ordered = sorted(values)
@@ -670,7 +681,7 @@ def _get_sleep_times_for_window(user_id: str, now: datetime, max_days: int):
         start_date = now.date() - timedelta(days=max_days - 1)
         end_date = now.date()
         starts, ends = storage_sqlite.get_sleep_times_for_window_db(user_id, start_date, end_date)
-        if starts and ends:
+        if starts and ends and len(starts) == len(ends):
             return starts, ends
     except Exception:
         logging.exception('get_sleep_times_for_window_db failed for %s', user_id)
@@ -732,28 +743,35 @@ def get_median_sleep_suppression_status(
         if not starts or not ends:
             return False, None
 
-        start_minutes = [_time_to_night_axis_minutes(d) for d in starts]
-        end_minutes = [_time_to_night_axis_minutes(d) for d in ends]
-        median_start = _median(start_minutes)
-        median_end = _median(end_minutes)
-        if median_start is None or median_end is None:
+        valid_starts: List[float] = []
+        durations: List[float] = []
+        for start, end in zip(starts, ends):
+            try:
+                start = as_jst(start)
+                end = as_jst(end)
+                duration = (end - start).total_seconds() / 60
+            except Exception:
+                continue
+            if 0 < duration < 24 * 60:
+                valid_starts.append(float(_time_of_day_minutes(start)))
+                durations.append(duration)
+
+        median_start = _circular_mean_minutes(valid_starts)
+        median_duration = _median(durations)
+        if median_start is None or median_duration is None or not 0 < median_duration < 24 * 60:
             return False, None
 
-        if median_end <= median_start:
-            median_end += 24 * 60
-
-        now_minutes = _time_to_night_axis_minutes(now)
-        if now_minutes < median_start:
-            now_minutes += 24 * 60
-
-        is_sleeping = median_start <= now_minutes <= median_end
+        median_end = median_start + median_duration
+        now_minutes = _time_of_day_minutes(now)
+        elapsed = (now_minutes - median_start) % (24 * 60)
+        is_sleeping = elapsed <= median_duration
         info = {
             'median_start': _night_axis_minutes_to_time_str(median_start),
             'median_end': _night_axis_minutes_to_time_str(median_end),
             'median_start_minutes': median_start,
             'median_end_minutes': median_end,
-            'starts_count': len(starts),
-            'ends_count': len(ends),
+            'starts_count': len(valid_starts),
+            'ends_count': len(durations),
         }
         return is_sleeping, info
     except Exception:
