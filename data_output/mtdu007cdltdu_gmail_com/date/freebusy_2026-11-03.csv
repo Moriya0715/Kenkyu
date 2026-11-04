@@ -1,0 +1,2 @@
+start_iso,end_iso,duration_min,start_local,end_local,start_time,end_time,weekday,duration_hm,range
+2026-11-03T00:00:00+09:00,2026-11-03T22:00:00+09:00,1320,2026-11-03 00:00 +0900,2026-11-03 22:00 +0900,00:00,13:00,Tue,22h0m,2026-11-03 00:00 +0900 - 2026-11-03 22:00 +0900 (Tue)
