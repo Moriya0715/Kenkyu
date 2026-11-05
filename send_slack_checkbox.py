@@ -17,6 +17,7 @@ import os
 import subprocess
 import sys
 import logging
+from contextlib import nullcontext
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -859,22 +860,77 @@ def create_app(bot_token: str, app_token: str, session: SurveySession) -> App:
         if not visibility:
             return
         session.pre_survey['visibility'] = visibility
-        # Persist pre-survey answer on the same notification_id before moving forward.
+
+        # Serialize generation for this session and user. The non-blocking
+        # checks prevent a second click from starting another AI request while
+        # the first request is still being processed.
+        generation_lock = session.followup_lock
+        if not generation_lock.acquire(blocking=False):
+            return
         try:
-            if storage_sqlite and session.notification_id:
-                storage_sqlite.upsert_response_by_notification_id(
-                    notification_id=session.notification_id,
-                    response_status='pending',
-                    visibility_before=1 if visibility == 'yes' else 0,
-                    user_id=session.user_id,
-                )
-        except Exception:
             try:
-                import logging
-                logging.exception('Failed to persist pre-survey visibility for notification_id=%s', session.notification_id)
+                lock_context = (
+                    storage_sqlite.user_lock(session.user_id, timeout_sec=0)
+                    if storage_sqlite
+                    else nullcontext()
+                )
+                with lock_context:
+                    # Persist pre-survey answer on the same notification_id before
+                    # moving forward.
+                    try:
+                        if storage_sqlite and session.notification_id:
+                            storage_sqlite.upsert_response_by_notification_id(
+                                notification_id=session.notification_id,
+                                response_status='pending',
+                                visibility_before=1 if visibility == 'yes' else 0,
+                                user_id=session.user_id,
+                            )
+                    except Exception:
+                        logging.exception(
+                            'Failed to persist pre-survey visibility for notification_id=%s',
+                            session.notification_id,
+                        )
+
+                    _update_message(
+                        client,
+                        [
+                            {
+                                'type': 'section',
+                                'text': {
+                                    'type': 'mrkdwn',
+                                    'text': '回答を受け付けました。メッセージを生成中です…',
+                                },
+                            }
+                        ],
+                        'メッセージを生成中です…',
+                    )
+                    try:
+                        _start_exercise_flow(client, user_visibility=visibility)
+                    except Exception:
+                        logging.exception(
+                            'Failed to generate exercise message for user=%s',
+                            session.user_id,
+                        )
+                        _update_message(
+                            client,
+                            [
+                                {
+                                    'type': 'section',
+                                    'text': {
+                                        'type': 'mrkdwn',
+                                        'text': 'メッセージの生成に失敗しました。管理者にお問い合わせください。',
+                                    },
+                                }
+                            ],
+                            'メッセージの生成に失敗しました。',
+                        )
             except Exception:
-                pass
-        _start_exercise_flow(client, user_visibility=visibility)
+                logging.info(
+                    'Ignoring duplicate pre-survey submission for user=%s',
+                    session.user_id,
+                )
+        finally:
+            generation_lock.release()
 
     @app.action('post_survey_implemented')
     def handle_post_impl(ack):
