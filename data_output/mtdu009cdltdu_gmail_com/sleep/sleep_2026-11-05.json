@@ -1,0 +1,630 @@
+{
+  "date": "2026-11-05",
+  "fetched_at": "2026-11-17T12:00:45.211239+09:00",
+  "source": "google_health",
+  "sessions": [
+    {
+      "start": "2026-11-05T01:32:00Z",
+      "end": "2026-11-05T02:36:00Z",
+      "duration_min": 64,
+      "raw": {
+        "interval": {
+          "startTime": "2026-11-05T01:32:00Z",
+          "startUtcOffset": "32400s",
+          "endTime": "2026-11-05T02:36:00Z",
+          "endUtcOffset": "32400s"
+        },
+        "type": "STAGES",
+        "stages": [
+          {
+            "startTime": "2026-11-05T01:32:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-05T01:35:00Z",
+            "endUtcOffset": "32400s",
+            "type": "AWAKE",
+            "createTime": "2026-11-05T02:54:20.144703Z",
+            "updateTime": "2026-11-05T02:54:20.144703Z"
+          },
+          {
+            "startTime": "2026-11-05T01:35:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-05T02:04:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT",
+            "createTime": "2026-11-05T02:54:20.144703Z",
+            "updateTime": "2026-11-05T02:54:20.144703Z"
+          },
+          {
+            "startTime": "2026-11-05T02:04:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-05T02:10:00Z",
+            "endUtcOffset": "32400s",
+            "type": "DEEP",
+            "createTime": "2026-11-05T02:54:20.144703Z",
+            "updateTime": "2026-11-05T02:54:20.144703Z"
+          },
+          {
+            "startTime": "2026-11-05T02:10:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-05T02:16:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT",
+            "createTime": "2026-11-05T02:54:20.144703Z",
+            "updateTime": "2026-11-05T02:54:20.144703Z"
+          },
+          {
+            "startTime": "2026-11-05T02:16:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-05T02:28:00Z",
+            "endUtcOffset": "32400s",
+            "type": "DEEP",
+            "createTime": "2026-11-05T02:54:20.144703Z",
+            "updateTime": "2026-11-05T02:54:20.144703Z"
+          },
+          {
+            "startTime": "2026-11-05T02:28:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-05T02:30:00Z",
+            "endUtcOffset": "32400s",
+            "type": "REM",
+            "createTime": "2026-11-05T02:54:20.144703Z",
+            "updateTime": "2026-11-05T02:54:20.144703Z"
+          },
+          {
+            "startTime": "2026-11-05T02:30:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-05T02:36:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT",
+            "createTime": "2026-11-05T02:54:20.144703Z",
+            "updateTime": "2026-11-05T02:54:20.144703Z"
+          }
+        ],
+        "metadata": {
+          "stagesStatus": "SUCCEEDED",
+          "processed": true,
+          "nap": true
+        },
+        "summary": {
+          "minutesInSleepPeriod": "64",
+          "minutesAfterWakeUp": "0",
+          "minutesToFallAsleep": "0",
+          "minutesAsleep": "61",
+          "minutesAwake": "3",
+          "stagesSummary": [
+            {
+              "type": "AWAKE",
+              "minutes": "3",
+              "count": "1"
+            },
+            {
+              "type": "LIGHT",
+              "minutes": "41",
+              "count": "3"
+            },
+            {
+              "type": "DEEP",
+              "minutes": "18",
+              "count": "2"
+            },
+            {
+              "type": "REM",
+              "minutes": "2",
+              "count": "1"
+            }
+          ]
+        },
+        "createTime": "2026-11-05T01:54:48.426015Z",
+        "updateTime": "2026-11-05T23:13:07.752719Z",
+        "shortAwakenings": [
+          {
+            "startTime": "2026-11-05T01:39:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-05T01:41:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          },
+          {
+            "startTime": "2026-11-05T01:56:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-05T01:58:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          },
+          {
+            "startTime": "2026-11-05T02:30:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-05T02:33:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          }
+        ]
+      }
+    },
+    {
+      "start": "2026-11-04T15:34:00Z",
+      "end": "2026-11-04T22:29:00Z",
+      "duration_min": 415,
+      "raw": {
+        "interval": {
+          "startTime": "2026-11-04T15:34:00Z",
+          "startUtcOffset": "32400s",
+          "endTime": "2026-11-04T22:29:00Z",
+          "endUtcOffset": "32400s"
+        },
+        "type": "STAGES",
+        "stages": [
+          {
+            "startTime": "2026-11-04T15:34:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T15:39:00Z",
+            "endUtcOffset": "32400s",
+            "type": "AWAKE",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T15:39:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T16:04:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T16:04:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T16:06:00Z",
+            "endUtcOffset": "32400s",
+            "type": "DEEP",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T16:06:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T16:09:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T16:09:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T16:20:00Z",
+            "endUtcOffset": "32400s",
+            "type": "DEEP",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T16:20:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T16:27:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T16:27:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T16:43:00Z",
+            "endUtcOffset": "32400s",
+            "type": "REM",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T16:43:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T16:57:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T16:57:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T17:12:00Z",
+            "endUtcOffset": "32400s",
+            "type": "DEEP",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T17:12:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T17:34:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T17:34:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T17:35:00Z",
+            "endUtcOffset": "32400s",
+            "type": "REM",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T17:35:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T17:38:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T17:38:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T17:39:00Z",
+            "endUtcOffset": "32400s",
+            "type": "AWAKE",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T17:39:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T17:41:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T17:41:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T17:58:00Z",
+            "endUtcOffset": "32400s",
+            "type": "REM",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T17:58:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T18:47:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T18:47:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T19:02:00Z",
+            "endUtcOffset": "32400s",
+            "type": "DEEP",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T19:02:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T19:09:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T19:09:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T19:14:00Z",
+            "endUtcOffset": "32400s",
+            "type": "REM",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T19:14:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T19:17:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T19:17:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T19:37:00Z",
+            "endUtcOffset": "32400s",
+            "type": "REM",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T19:37:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T19:41:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T19:41:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T19:51:00Z",
+            "endUtcOffset": "32400s",
+            "type": "REM",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T19:51:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T20:55:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T20:55:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T21:09:00Z",
+            "endUtcOffset": "32400s",
+            "type": "REM",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T21:09:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T21:10:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T21:10:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T21:11:00Z",
+            "endUtcOffset": "32400s",
+            "type": "REM",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T21:11:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T22:00:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T22:00:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T22:13:00Z",
+            "endUtcOffset": "32400s",
+            "type": "REM",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          },
+          {
+            "startTime": "2026-11-04T22:13:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T22:29:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT",
+            "createTime": "2026-11-04T22:55:35.751471Z",
+            "updateTime": "2026-11-04T22:55:35.751471Z"
+          }
+        ],
+        "metadata": {
+          "stagesStatus": "SUCCEEDED",
+          "processed": true,
+          "mainSleep": true
+        },
+        "summary": {
+          "minutesInSleepPeriod": "415",
+          "minutesAfterWakeUp": "0",
+          "minutesToFallAsleep": "0",
+          "minutesAsleep": "409",
+          "minutesAwake": "6",
+          "stagesSummary": [
+            {
+              "type": "AWAKE",
+              "minutes": "6",
+              "count": "2"
+            },
+            {
+              "type": "LIGHT",
+              "minutes": "269",
+              "count": "15"
+            },
+            {
+              "type": "DEEP",
+              "minutes": "43",
+              "count": "4"
+            },
+            {
+              "type": "REM",
+              "minutes": "97",
+              "count": "9"
+            }
+          ]
+        },
+        "createTime": "2026-11-04T16:20:10.440639Z",
+        "updateTime": "2026-11-05T02:40:24.582095Z",
+        "shortAwakenings": [
+          {
+            "startTime": "2026-11-04T15:40:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T15:41:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          },
+          {
+            "startTime": "2026-11-04T15:58:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T15:59:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          },
+          {
+            "startTime": "2026-11-04T17:12:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T17:13:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          },
+          {
+            "startTime": "2026-11-04T17:25:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T17:26:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          },
+          {
+            "startTime": "2026-11-04T17:30:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T17:31:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          },
+          {
+            "startTime": "2026-11-04T17:35:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T17:36:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          },
+          {
+            "startTime": "2026-11-04T17:58:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T17:59:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          },
+          {
+            "startTime": "2026-11-04T18:30:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T18:31:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          },
+          {
+            "startTime": "2026-11-04T19:02:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T19:03:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          },
+          {
+            "startTime": "2026-11-04T19:14:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T19:16:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          },
+          {
+            "startTime": "2026-11-04T19:37:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T19:38:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          },
+          {
+            "startTime": "2026-11-04T19:51:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T19:52:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          },
+          {
+            "startTime": "2026-11-04T19:58:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T19:59:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          },
+          {
+            "startTime": "2026-11-04T20:26:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T20:27:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          },
+          {
+            "startTime": "2026-11-04T20:44:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T20:45:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          },
+          {
+            "startTime": "2026-11-04T20:49:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T20:50:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          },
+          {
+            "startTime": "2026-11-04T21:07:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T21:08:00Z",
+            "endUtcOffset": "32400s",
+            "type": "REM"
+          },
+          {
+            "startTime": "2026-11-04T21:12:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T21:15:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          },
+          {
+            "startTime": "2026-11-04T21:16:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T21:18:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          },
+          {
+            "startTime": "2026-11-04T21:34:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T21:36:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          },
+          {
+            "startTime": "2026-11-04T21:56:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T21:58:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          },
+          {
+            "startTime": "2026-11-04T22:13:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T22:14:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          },
+          {
+            "startTime": "2026-11-04T22:20:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T22:21:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT"
+          }
+        ]
+      }
+    }
+  ]
+}

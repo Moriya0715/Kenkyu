@@ -1,6 +1,6 @@
 {
   "date": "2026-10-29",
-  "fetched_at": "2026-10-30T23:20:59.208119+09:00",
+  "fetched_at": "2026-11-11T12:00:36.558155+09:00",
   "source": "google_health",
   "sessions": [
     {
@@ -128,7 +128,8 @@
         "metadata": {
           "stagesStatus": "SUCCEEDED",
           "processed": true,
-          "nap": true
+          "nap": true,
+          "mainSleep": true
         },
         "summary": {
           "minutesInSleepPeriod": "98",

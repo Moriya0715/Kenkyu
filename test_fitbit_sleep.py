@@ -137,6 +137,71 @@ class SleepHistoryRefreshTests(unittest.TestCase):
             self.assertFalse(is_suppressed_day)
             self.assertIsNotNone(info_day)
 
+    def test_median_sleep_window_night_owl(self):
+        tz = timezone(timedelta(hours=9))
+        now = datetime(2026, 10, 7, 14, 41, tzinfo=tz)
+        starts = [
+            datetime(2026, 10, 7, 4, 30, tzinfo=tz) - timedelta(days=i)
+            + timedelta(hours=i % 2)
+            for i in range(14)
+        ]
+        ends = [start + timedelta(hours=7) for start in starts]
+
+        with patch('storage_sqlite.get_sleep_times_for_window_db', return_value=(starts, ends)):
+            suppressed, info = fitbit_sleep.get_median_sleep_suppression_status('user', now, 14)
+            self.assertFalse(suppressed)
+            self.assertEqual(info['median_start'], '05:00')
+            self.assertEqual(info['median_end'], '12:00')
+
+            suppressed, _ = fitbit_sleep.get_median_sleep_suppression_status(
+                'user', now.replace(hour=6, minute=0), 14
+            )
+            self.assertTrue(suppressed)
+
+    def test_median_sleep_window_regular_schedule(self):
+        tz = timezone(timedelta(hours=9))
+        starts = [
+            datetime(2026, 10, 7, 23, 30, tzinfo=tz) - timedelta(days=i) + timedelta(minutes=(i % 2) * 30)
+            for i in range(14)
+        ]
+        ends = [start + timedelta(hours=7) for start in starts]
+
+        with patch('storage_sqlite.get_sleep_times_for_window_db', return_value=(starts, ends)):
+            suppressed, _ = fitbit_sleep.get_median_sleep_suppression_status(
+                'user', datetime(2026, 10, 7, 3, 0, tzinfo=tz), 14
+            )
+            self.assertTrue(suppressed)
+            suppressed, _ = fitbit_sleep.get_median_sleep_suppression_status(
+                'user', datetime(2026, 10, 7, 14, 0, tzinfo=tz), 14
+            )
+            self.assertFalse(suppressed)
+
+    def test_median_sleep_window_handles_midnight_start_boundary(self):
+        tz = timezone(timedelta(hours=9))
+        starts = [
+            datetime(2026, 10, 7, 23, 50, tzinfo=tz) - timedelta(days=i) if i % 2 == 0
+            else datetime(2026, 10, 7, 0, 10, tzinfo=tz) - timedelta(days=i)
+            for i in range(14)
+        ]
+        ends = [start + timedelta(hours=7) for start in starts]
+
+        with patch('storage_sqlite.get_sleep_times_for_window_db', return_value=(starts, ends)):
+            suppressed, info = fitbit_sleep.get_median_sleep_suppression_status(
+                'user', datetime(2026, 10, 7, 0, 0, tzinfo=tz), 14
+            )
+        self.assertEqual(info['median_start'], '00:00')
+        self.assertTrue(suppressed)
+
+    def test_median_sleep_window_without_data(self):
+        tz = timezone(timedelta(hours=9))
+        with patch('storage_sqlite.get_sleep_times_for_window_db', return_value=([], [])):
+            self.assertEqual(
+                fitbit_sleep.get_median_sleep_suppression_status(
+                    'user', datetime(2026, 10, 7, 12, 0, tzinfo=tz), 14
+                ),
+                (False, None),
+            )
+
 
     def test_resolve_is_main_sleep_priority_and_threshold(self):
         import storage_sqlite

@@ -1,6 +1,54 @@
 {
   "date": "2026-11-04",
-  "fetched_at": "2026-11-04T09:20:59.230405+09:00",
+  "fetched_at": "2026-11-17T12:00:58.135437+09:00",
   "source": "google_health",
-  "sessions": []
+  "sessions": [
+    {
+      "start": "2026-11-03T15:48:00Z",
+      "end": "2026-11-04T00:34:00Z",
+      "duration_min": 526,
+      "raw": {
+        "interval": {
+          "startTime": "2026-11-03T15:48:00Z",
+          "startUtcOffset": "32400s",
+          "endTime": "2026-11-04T00:34:00Z",
+          "endUtcOffset": "32400s"
+        },
+        "type": "CLASSIC",
+        "stages": [
+          {
+            "startTime": "2026-11-03T15:48:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-11-04T00:34:00Z",
+            "endUtcOffset": "32400s",
+            "type": "ASLEEP",
+            "createTime": "2026-11-04T00:34:28.679439Z",
+            "updateTime": "2026-11-04T00:34:28.679439Z"
+          }
+        ],
+        "metadata": {
+          "processed": true,
+          "manuallyEdited": true,
+          "externalId": "2820559200761192256",
+          "mainSleep": true
+        },
+        "summary": {
+          "minutesInSleepPeriod": "526",
+          "minutesAfterWakeUp": "0",
+          "minutesToFallAsleep": "0",
+          "minutesAsleep": "526",
+          "minutesAwake": "0",
+          "stagesSummary": [
+            {
+              "type": "ASLEEP",
+              "minutes": "526",
+              "count": "1"
+            }
+          ]
+        },
+        "createTime": "2026-11-04T00:34:28.679439Z",
+        "updateTime": "2026-11-04T00:34:30.233375Z"
+      }
+    }
+  ]
 }

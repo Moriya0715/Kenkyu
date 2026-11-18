@@ -1,58 +1,74 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""Test launch_session socket-server path detection."""
+"""Enqueue a manual pre-survey flow for a test user.
+
+Run socket_server.py separately. This script only starts the same
+launch_session path used by the main program; Slack interaction and AI
+message updates are handled by socket_server.py and send_slack_checkbox.py.
+"""
+from __future__ import annotations
+
+import argparse
 import os
 import sys
-import logging
 
-# Setup logging to stdout
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(levelname)s: %(message)s',
-)
 
-# Check DB lock for socket_server
-import lock_db
-lock_exists = lock_db.is_held('socket_server')
-print(f'socket_server DB lock held: {lock_exists}')
+DEFAULT_USER_ID = 'seiichiro019@gmail.com'
 
-print('\nTesting launch_session behavior...')
 
-# Set env and import
-os.environ.pop('USE_SOCKET_SERVER', None)  # Ensure it's not explicitly set
-import send_slack_checkbox
-import storage_sqlite
+def _load_dotenv() -> None:
+    """Load repository .env values before importing DB-dependent modules."""
+    dotenv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+    if not os.path.exists(dotenv_path):
+        return
+    with open(dotenv_path, 'r', encoding='utf-8') as env_file:
+        for line in env_file:
+            line = line.strip()
+            if not line or line.startswith('#') or '=' not in line:
+                continue
+            key, value = line.split('=', 1)
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            if key and key not in os.environ:
+                os.environ[key] = value
 
-# Test socket_server_running detection inside launch_session
-print(f'socket_server_running (lock exists): {lock_exists}')
 
-# Create a test entry in DB to verify enqueue works
-try:
-    user_id = 'test_socket_server@gmail.com'
-    nid = storage_sqlite.create_sent_notification(
-        user_id=user_id,
-        exercise_name='Test Exercise',
-        exercise_type='stretch',
-        message_text='Test Message',
-        ai_context={},
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description='Enqueue the production-like pre-survey flow for a test user.'
     )
-    print(f'Created test notification ID: {nid}')
-    
-    # Verify it was created
-    conn = storage_sqlite._get_conn(storage_sqlite.DB_PATH)
-    cur = conn.cursor()
-    cur.execute('SELECT id, user_id, status FROM sent_exercise_notifications WHERE id = %s', (nid,))
-    row = cur.fetchone()
-    conn.close()
-    
-    if row:
-        print(f'Verified: ID={row[0]} User={row[1]} Status={row[2]}')
-    else:
-        print('ERROR: Notification not found after creation')
-        
-except Exception as e:
-    print(f'Error: {e}')
-    import traceback
-    traceback.print_exc()
+    parser.add_argument(
+        '--user-id',
+        default=DEFAULT_USER_ID,
+        help='User ID used to resolve the Slack destination from the DB.',
+    )
+    args = parser.parse_args()
 
-print('\n✓ Test completed')
+    _load_dotenv()
+
+    import lock_db
+    import send_slack_checkbox
+
+    if not lock_db.is_held('socket_server'):
+        raise RuntimeError(
+            'socket_server.py must be running before this test. '
+            'The test will not start another Socket Mode process.'
+        )
+
+    send_slack_checkbox.launch_session(
+        user_id=args.user_id,
+        channel=None,
+        motion_detected=False,
+        exercise_type='stretch',
+        ai_context={'test_name': 'socket_server_pre_survey'},
+        detection_type='no_movement',
+    )
+    return 0
+
+
+if __name__ == '__main__':
+    try:
+        sys.exit(main())
+    except Exception as exc:
+        print(f'test setup failed: {exc}', file=sys.stderr)
+        sys.exit(1)

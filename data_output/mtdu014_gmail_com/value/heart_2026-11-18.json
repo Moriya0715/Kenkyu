@@ -1,0 +1,81 @@
+{
+  "time_zone": "Asia/Tokyo",
+  "PerMinute": [
+    {
+      "time": "00:01:00",
+      "heart_rate": 85,
+      "steps": 5,
+      "calories": 2.9203460000000003
+    },
+    {
+      "time": "00:02:00",
+      "heart_rate": 76,
+      "steps": 0,
+      "calories": 1.12321
+    },
+    {
+      "time": "00:03:00",
+      "heart_rate": 74,
+      "steps": 0,
+      "calories": 1.12321
+    },
+    {
+      "time": "00:04:00",
+      "heart_rate": 77,
+      "steps": 0,
+      "calories": 1.12321
+    },
+    {
+      "time": "00:05:00",
+      "heart_rate": 83,
+      "steps": 0,
+      "calories": 1.12321
+    },
+    {
+      "time": "00:06:00",
+      "heart_rate": null,
+      "steps": null,
+      "calories": 1.12321
+    },
+    {
+      "time": "00:07:00",
+      "heart_rate": null,
+      "steps": null,
+      "calories": 1.12321
+    },
+    {
+      "time": "00:08:00",
+      "heart_rate": null,
+      "steps": null,
+      "calories": 1.12321
+    },
+    {
+      "time": "00:09:00",
+      "heart_rate": null,
+      "steps": null,
+      "calories": 1.12321
+    },
+    {
+      "time": "00:10:00",
+      "heart_rate": null,
+      "steps": null,
+      "calories": 1.12321
+    },
+    {
+      "time": "00:11:00",
+      "heart_rate": null,
+      "steps": null,
+      "calories": 1.12321
+    }
+  ],
+  "calculated_value": {
+    "heart_rate_max": 85,
+    "heart_rate_min": 74,
+    "steps_max": 5,
+    "steps_min": 0,
+    "steps_max_min_diff": 5,
+    "resting_heart_rate": null,
+    "calories_max": 2.9203460000000003,
+    "calories_min": 1.12321
+  }
+}

@@ -1,8 +1,91 @@
 {
   "date": "2026-10-23",
-  "fetched_at": "2026-10-23T12:00:55.428430+09:00",
+  "fetched_at": "2026-11-05T17:34:17.715537+09:00",
   "source": "google_health",
   "sessions": [
+    {
+      "start": "2026-10-23T02:58:00Z",
+      "end": "2026-10-23T03:53:00Z",
+      "duration_min": 55,
+      "raw": {
+        "interval": {
+          "startTime": "2026-10-23T02:58:00Z",
+          "startUtcOffset": "32400s",
+          "endTime": "2026-10-23T03:53:00Z",
+          "endUtcOffset": "32400s"
+        },
+        "type": "STAGES",
+        "stages": [
+          {
+            "startTime": "2026-10-23T02:58:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-10-23T03:00:00Z",
+            "endUtcOffset": "32400s",
+            "type": "AWAKE",
+            "createTime": "2026-10-23T04:18:20.371519Z",
+            "updateTime": "2026-10-23T04:18:20.371519Z"
+          },
+          {
+            "startTime": "2026-10-23T03:00:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-10-23T03:16:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT",
+            "createTime": "2026-10-23T04:18:20.371519Z",
+            "updateTime": "2026-10-23T04:18:20.371519Z"
+          },
+          {
+            "startTime": "2026-10-23T03:16:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-10-23T03:51:00Z",
+            "endUtcOffset": "32400s",
+            "type": "DEEP",
+            "createTime": "2026-10-23T04:18:20.371519Z",
+            "updateTime": "2026-10-23T04:18:20.371519Z"
+          },
+          {
+            "startTime": "2026-10-23T03:51:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-10-23T03:53:00Z",
+            "endUtcOffset": "32400s",
+            "type": "AWAKE",
+            "createTime": "2026-10-23T04:18:20.371519Z",
+            "updateTime": "2026-10-23T04:18:20.371519Z"
+          }
+        ],
+        "metadata": {
+          "stagesStatus": "SUCCEEDED",
+          "processed": true,
+          "nap": true
+        },
+        "summary": {
+          "minutesInSleepPeriod": "55",
+          "minutesAfterWakeUp": "0",
+          "minutesToFallAsleep": "0",
+          "minutesAsleep": "51",
+          "minutesAwake": "4",
+          "stagesSummary": [
+            {
+              "type": "AWAKE",
+              "minutes": "4",
+              "count": "2"
+            },
+            {
+              "type": "LIGHT",
+              "minutes": "16",
+              "count": "1"
+            },
+            {
+              "type": "DEEP",
+              "minutes": "35",
+              "count": "1"
+            }
+          ]
+        },
+        "createTime": "2026-10-23T03:17:52.872975Z",
+        "updateTime": "2026-10-23T23:07:52.673647Z"
+      }
+    },
     {
       "start": "2026-10-22T15:39:00Z",
       "end": "2026-10-22T22:57:00Z",
@@ -223,7 +306,7 @@
           ]
         },
         "createTime": "2026-10-22T15:56:11.332031Z",
-        "updateTime": "2026-10-22T23:02:41.787871Z",
+        "updateTime": "2026-10-23T03:02:48.683135Z",
         "shortAwakenings": [
           {
             "startTime": "2026-10-22T16:23:00Z",

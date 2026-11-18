@@ -1,0 +1,82 @@
+{
+  "date": "2026-10-27",
+  "fetched_at": "2026-11-09T12:00:58.153792+09:00",
+  "source": "google_health",
+  "sessions": [
+    {
+      "start": "2026-10-27T10:20:00Z",
+      "end": "2026-10-27T11:44:00Z",
+      "duration_min": 84,
+      "raw": {
+        "interval": {
+          "startTime": "2026-10-27T10:20:00Z",
+          "startUtcOffset": "32400s",
+          "endTime": "2026-10-27T11:44:00Z",
+          "endUtcOffset": "32400s"
+        },
+        "type": "STAGES",
+        "stages": [
+          {
+            "startTime": "2026-10-27T10:20:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-10-27T10:28:00Z",
+            "endUtcOffset": "32400s",
+            "type": "AWAKE",
+            "createTime": "2026-10-27T12:02:13.602927Z",
+            "updateTime": "2026-10-27T12:02:13.602927Z"
+          },
+          {
+            "startTime": "2026-10-27T10:28:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-10-27T10:31:00Z",
+            "endUtcOffset": "32400s",
+            "type": "LIGHT",
+            "createTime": "2026-10-27T12:02:13.602927Z",
+            "updateTime": "2026-10-27T12:02:13.602927Z"
+          },
+          {
+            "startTime": "2026-10-27T10:31:00Z",
+            "startUtcOffset": "32400s",
+            "endTime": "2026-10-27T11:44:00Z",
+            "endUtcOffset": "32400s",
+            "type": "DEEP",
+            "createTime": "2026-10-27T12:02:13.602927Z",
+            "updateTime": "2026-10-27T12:02:13.602927Z"
+          }
+        ],
+        "metadata": {
+          "stagesStatus": "SUCCEEDED",
+          "processed": true,
+          "nap": true,
+          "mainSleep": true
+        },
+        "summary": {
+          "minutesInSleepPeriod": "84",
+          "minutesAfterWakeUp": "0",
+          "minutesToFallAsleep": "0",
+          "minutesAsleep": "76",
+          "minutesAwake": "8",
+          "stagesSummary": [
+            {
+              "type": "AWAKE",
+              "minutes": "8",
+              "count": "1"
+            },
+            {
+              "type": "LIGHT",
+              "minutes": "3",
+              "count": "1"
+            },
+            {
+              "type": "DEEP",
+              "minutes": "73",
+              "count": "1"
+            }
+          ]
+        },
+        "createTime": "2026-10-27T10:51:04.762223Z",
+        "updateTime": "2026-10-27T16:22:32.894847Z"
+      }
+    }
+  ]
+}
